@@ -1,0 +1,11 @@
+{
+  "domain": "a.o.smith",
+  "name": "Ai-Link A.O. Smith",
+  "version": "1.0.0",
+  "documentation": "https://github.com/mopocv/Ai-Link_A.O.Smith",
+  "requirements": ["aiohttp>=3.8.0"],
+  "dependencies": [],
+  "codeowners": ["@mopocv"],
+  "config_flow": true,
+  "iot_class": "cloud_polling"
+}
