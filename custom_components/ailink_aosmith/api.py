@@ -59,31 +59,26 @@ class AOSmithAPI:
                             info = data.get("info", {})
                             _LOGGER.debug("Full info response: %s", json.dumps(info, indent=2))
                             
+                            # 优先使用 devInfoItemInfoList 中的完整设备信息
                             devices = []
                             
-                            # 从 devInfoItemInfoList 提取设备（主要设备列表）
+                            # 从 devInfoItemInfoList 提取设备（包含完整信息）
                             if "devInfoItemInfoList" in info:
                                 devices.extend(info["devInfoItemInfoList"])
                                 _LOGGER.debug("Found %d devices in devInfoItemInfoList", len(info["devInfoItemInfoList"]))
                             
-                            # 从 roomInfoItemInfoList 中的每个房间提取设备
-                            if "roomInfoItemInfoList" in info:
+                            # 如果 devInfoItemInfoList 中没有设备，再从 roomInfoItemInfoList 中提取
+                            if not devices and "roomInfoItemInfoList" in info:
                                 for room_info in info["roomInfoItemInfoList"]:
                                     if "deviceList" in room_info:
                                         devices.extend(room_info["deviceList"])
                                         _LOGGER.debug("Found %d devices in room %s", 
                                                     len(room_info["deviceList"]), room_info.get("roomName"))
                             
-                            # 去重，基于 deviceId
-                            unique_devices = {}
-                            for device in devices:
-                                device_id = device.get("deviceId")
-                                if device_id:
-                                    unique_devices[device_id] = device
-                            
-                            devices = list(unique_devices.values())
-                            
-                            _LOGGER.debug("All unique devices: %s", json.dumps(devices, indent=2))
+                            # 记录所有找到的设备及其字段
+                            for i, device in enumerate(devices):
+                                _LOGGER.debug("Device %d: %s", i, device)
+                                _LOGGER.debug("Device %d keys: %s", i, list(device.keys()))
                             
                             # 过滤热水器设备（deviceCategory = 19）
                             water_heaters = [
@@ -93,14 +88,22 @@ class AOSmithAPI:
                             
                             _LOGGER.info("Found %d water heater devices", len(water_heaters))
                             for device in water_heaters:
-                                _LOGGER.info("Device: %s (ID: %s, Category: %s)", 
+                                _LOGGER.info("Device: %s (ID: %s, Category: %s, Model: %s)", 
                                         device.get("productName"), 
                                         device.get("deviceId"),
-                                        device.get("deviceCategory"))
+                                        device.get("deviceCategory"),
+                                        device.get("deviceModel"))
                             
                             if not water_heaters:
-                                _LOGGER.warning("No water heater devices found. All device categories: %s", 
-                                            [d.get("deviceCategory") for d in devices])
+                                # 如果没有找到热水器，记录所有设备的类别用于调试
+                                all_categories = [d.get("deviceCategory") for d in devices]
+                                _LOGGER.warning("No water heater devices found. All device categories: %s", all_categories)
+                                # 也记录所有设备ID和名称
+                                for device in devices:
+                                    _LOGGER.warning("Available device: ID=%s, Name=%s, Category=%s", 
+                                                device.get("deviceId"), 
+                                                device.get("productName"),
+                                                device.get("deviceCategory"))
                             
                             return water_heaters
                         else:
@@ -114,7 +117,7 @@ class AOSmithAPI:
             _LOGGER.error("Failed to get devices: %s", e)
             
         return []
-        
+
     async def async_get_device_status(self, device_id: str) -> Optional[Dict[str, Any]]:
         """Get current device status."""
         encode = self._generate_encode(device_id)
