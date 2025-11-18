@@ -1,8 +1,4 @@
 {
   "name": "Ai-Link A.O. Smith",
-  "render_readme": true,
-  "domains": ["water_heater", "sensor"],
-  "country": "CN",
-  "homeassistant": "2023.8.0",
-  "iot_class": "cloud_polling"
+  "render_readme": true
 }
