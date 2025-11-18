@@ -1,6 +1,12 @@
 {
   "name": "Ai-Link A.O. Smith",
   "render_readme": true,
+  "domains": [
+    "water_heater",
+    "sensor"
+  ],
+  "country": "CN",
+  "icon": "custom_components/ailink_aosmith/icon.png",
   "homeassistant": "2024.4.4",
   "hacs": "1.34.0"
 }
