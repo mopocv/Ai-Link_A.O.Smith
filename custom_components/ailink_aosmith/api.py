@@ -61,40 +61,46 @@ class AOSmithAPI:
                             
                             devices = []
                             
-                            # Extract from deviceList
-                            if "deviceList" in info:
-                                devices.extend(info["deviceList"])
-                                _LOGGER.debug("Found %d devices in deviceList", len(info["deviceList"]))
+                            # 从 devInfoItemInfoList 提取设备（主要设备列表）
+                            if "devInfoItemInfoList" in info:
+                                devices.extend(info["devInfoItemInfoList"])
+                                _LOGGER.debug("Found %d devices in devInfoItemInfoList", len(info["devInfoItemInfoList"]))
                             
-                            # Extract from spaceDeviceMapping  
-                            if "spaceDeviceMapping" in info:
-                                for i, space_device in enumerate(info["spaceDeviceMapping"]):
-                                    _LOGGER.debug("Space device mapping %d: %s", i, space_device)
-                                    if "appDeviceEntityList" in space_device:
-                                        devices.extend(space_device["appDeviceEntityList"])
-                                        _LOGGER.debug("Found %d devices in space mapping %d", 
-                                                    len(space_device["appDeviceEntityList"]), i)
+                            # 从 roomInfoItemInfoList 中的每个房间提取设备
+                            if "roomInfoItemInfoList" in info:
+                                for room_info in info["roomInfoItemInfoList"]:
+                                    if "deviceList" in room_info:
+                                        devices.extend(room_info["deviceList"])
+                                        _LOGGER.debug("Found %d devices in room %s", 
+                                                    len(room_info["deviceList"]), room_info.get("roomName"))
                             
-                            # Log all found devices for debugging
-                            _LOGGER.debug("All found devices: %s", json.dumps(devices, indent=2))
+                            # 去重，基于 deviceId
+                            unique_devices = {}
+                            for device in devices:
+                                device_id = device.get("deviceId")
+                                if device_id:
+                                    unique_devices[device_id] = device
                             
-                            # Filter for water heater devices (productMajorClassCode = 19)
+                            devices = list(unique_devices.values())
+                            
+                            _LOGGER.debug("All unique devices: %s", json.dumps(devices, indent=2))
+                            
+                            # 过滤热水器设备（deviceCategory = 19）
                             water_heaters = [
                                 device for device in devices 
-                                if device.get("productMajorClassCode") == "19"
+                                if device.get("deviceCategory") == "19"
                             ]
                             
                             _LOGGER.info("Found %d water heater devices", len(water_heaters))
                             for device in water_heaters:
-                                _LOGGER.info("Device: %s (ID: %s, Model: %s, Class: %s)", 
-                                           device.get("deviceName"), 
-                                           device.get("deviceId"),
-                                           device.get("productModel"),
-                                           device.get("productMajorClassCode"))
+                                _LOGGER.info("Device: %s (ID: %s, Category: %s)", 
+                                        device.get("productName"), 
+                                        device.get("deviceId"),
+                                        device.get("deviceCategory"))
                             
                             if not water_heaters:
-                                _LOGGER.warning("No water heater devices found. All device types: %s", 
-                                              [d.get("productMajorClassCode") for d in devices])
+                                _LOGGER.warning("No water heater devices found. All device categories: %s", 
+                                            [d.get("deviceCategory") for d in devices])
                             
                             return water_heaters
                         else:
@@ -108,7 +114,7 @@ class AOSmithAPI:
             _LOGGER.error("Failed to get devices: %s", e)
             
         return []
-    
+        
     async def async_get_device_status(self, device_id: str) -> Optional[Dict[str, Any]]:
         """Get current device status."""
         encode = self._generate_encode(device_id)
