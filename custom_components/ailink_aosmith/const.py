@@ -8,6 +8,7 @@ CONF_USER_ID = "user_id"
 CONF_FAMILY_ID = "family_id"
 CONF_DEVICE_ID = "device_id"
 CONF_MOBILE = "mobile"
+CONF_COOKIE = "cookie"  # 新增 Cookie 配置
 
 # Default values
 DEFAULT_NAME = "Ai-Link A.O. Smith Water Heater"

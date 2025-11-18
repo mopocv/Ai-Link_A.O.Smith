@@ -3,7 +3,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 
-from .const import DOMAIN, CONF_USER_ID, CONF_FAMILY_ID, CONF_ACCESS_TOKEN, CONF_DEVICE_ID, CONF_MOBILE
+from .const import DOMAIN, CONF_USER_ID, CONF_FAMILY_ID, CONF_ACCESS_TOKEN, CONF_DEVICE_ID, CONF_MOBILE, CONF_COOKIE
 
 class AOSmithConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Ai-Link A.O. Smith."""
@@ -25,6 +25,7 @@ class AOSmithConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 user_input[CONF_ACCESS_TOKEN],
                 user_input[CONF_USER_ID],
                 user_input[CONF_FAMILY_ID],
+                user_input.get(CONF_COOKIE),
                 user_input.get(CONF_MOBILE)
             )
             
@@ -43,13 +44,17 @@ class AOSmithConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required(CONF_ACCESS_TOKEN): str,
             vol.Required(CONF_USER_ID): str,
             vol.Required(CONF_FAMILY_ID): str,
+            vol.Optional(CONF_COOKIE, default="cna=130fe055be754d199cb6efba84e9b020"): str,
             vol.Optional(CONF_MOBILE): str,
         })
         
         return self.async_show_form(
             step_id="user",
             data_schema=data_schema,
-            errors=errors
+            errors=errors,
+            description_placeholders={
+                "cookie_info": "通常为: cna=130fe055be754d199cb6efba84e9b020"
+            }
         )
     
     async def async_step_select_device(self, user_input=None):
@@ -97,12 +102,12 @@ class AOSmithConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data=user_input
         )
     
-    async def _get_devices(self, access_token: str, user_id: str, family_id: str, mobile: str = None) -> list:
+    async def _get_devices(self, access_token: str, user_id: str, family_id: str, cookie: str = None, mobile: str = None) -> list:
         """Get list of devices."""
         from .api import AOSmithAPI
         
         try:
-            self._api = AOSmithAPI(access_token, user_id, family_id, mobile)
+            self._api = AOSmithAPI(access_token, user_id, family_id, cookie, mobile)
             await self._api.async_authenticate()
             devices = await self._api.async_get_devices()
             return devices

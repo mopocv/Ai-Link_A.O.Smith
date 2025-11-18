@@ -21,6 +21,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         access_token=entry.data["access_token"],
         user_id=entry.data["user_id"],
         family_id=entry.data["family_id"],
+        cookie=entry.data.get("cookie"),
         mobile=entry.data.get("mobile")
     )
     

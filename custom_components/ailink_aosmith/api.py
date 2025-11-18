@@ -12,11 +12,12 @@ _LOGGER = logging.getLogger(__name__)
 class AOSmithAPI:
     """A.O. Smith API client using pre-obtained access token."""
     
-    def __init__(self, access_token: str, user_id: str, family_id: str, mobile: str = None):
+    def __init__(self, access_token: str, user_id: str, family_id: str, cookie: str = None, mobile: str = None):
         """Initialize the API client."""
         self._access_token = access_token
         self._user_id = user_id
         self._family_id = family_id
+        self._cookie = cookie or "cna=130fe055be754d199cb6efba84e9b020"  # 默认值作为fallback
         self._mobile = mobile
         self._session: Optional[aiohttp.ClientSession] = None
         
@@ -173,9 +174,8 @@ class AOSmithAPI:
             "Content-Type": "application/json",
             "traceId": f"{timestamp}-69861-{self._user_id}-00",
             "User-Agent": "AI jia zhi kong/2.2.5 (iPhone; iOS 26.0; Scale/3.00)",
-            "Cookie": "cna=130fe055be754d199cb6efba84e9b020",
-            # sign parameter is omitted
-            "sign": "",
+            "Cookie": self._cookie,
+            "sign": "",  # 留空
         }
         
         return headers
