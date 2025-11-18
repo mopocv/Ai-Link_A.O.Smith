@@ -20,8 +20,9 @@
 - access_token
 - user_id  
 - family_id
-- device_id (可选)
-- mobile (可选)
+- cookie
+- device_id
+- mobile
 
 ## 支持
 
