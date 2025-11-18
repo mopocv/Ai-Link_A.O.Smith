@@ -1,6 +1,6 @@
-# Ai-Link_A.O.Smith
+# Ai-Link A.O. Smith
 
-此集成允许您在 Home Assistant 中控制 Ai家智控（A.O.Smith） 热水器。
+此集成允许您在 Home Assistant 中控制 Ai家智控（A.O. Smith） 热水器。
 
 ## 功能
 
