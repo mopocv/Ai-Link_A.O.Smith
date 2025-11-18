@@ -1,6 +1,6 @@
-"""Constants for A.O. Smith integration."""
-DOMAIN = "aosmith"
-BRAND = "A.O. Smith"
+"""Constants for Ai-Link A.O. Smith integration."""
+DOMAIN = "ailink_aosmith"
+BRAND = "Ai-Link A.O. Smith"
 
 # Configuration
 CONF_ACCESS_TOKEN = "access_token"
@@ -10,7 +10,7 @@ CONF_DEVICE_ID = "device_id"
 CONF_MOBILE = "mobile"
 
 # Default values
-DEFAULT_NAME = "A.O. Smith Water Heater"
+DEFAULT_NAME = "Ai-Link A.O. Smith Water Heater"
 
 # Sensor types
 SENSOR_TYPES = {

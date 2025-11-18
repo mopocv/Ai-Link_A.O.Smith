@@ -19,7 +19,7 @@ SUPPORT_FLAGS = SUPPORT_OPERATION_MODE | SUPPORT_TARGET_TEMPERATURE
 OPERATION_MODES = [STATE_ECO, STATE_PERFORMANCE]
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up A.O. Smith water_heater platform."""
+    """Set up Ai-Link A.O. Smith water_heater platform."""
     api = hass.data[DOMAIN][config_entry.entry_id]
     
     # Get device ID from config
@@ -39,15 +39,15 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         _LOGGER.error("No device ID configured")
 
 class AOSmithWaterHeater(WaterHeaterEntity):
-    """Representation of an A.O. Smith water heater."""
+    """Representation of an Ai-Link A.O. Smith water heater."""
     
     def __init__(self, api, device):
         """Initialize the water heater."""
         self._api = api
         self._device = device
         self._device_id = device["deviceId"]
-        self._attr_name = device.get("deviceName", "A.O. Smith Water Heater")
-        self._attr_unique_id = f"aosmith_water_heater_{self._device_id}"
+        self._attr_name = device.get("deviceName", "Ai-Link A.O. Smith Water Heater")
+        self._attr_unique_id = f"ailink_aosmith_water_heater_{self._device_id}"
         
         self._current_temperature = None
         self._target_temperature = None

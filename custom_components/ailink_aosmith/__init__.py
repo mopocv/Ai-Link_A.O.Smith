@@ -1,4 +1,4 @@
-"""The A.O. Smith integration."""
+"""The Ai-Link A.O. Smith integration."""
 import asyncio
 import logging
 
@@ -13,7 +13,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = ["water_heater", "sensor"]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up A.O. Smith from a config entry."""
+    """Set up Ai-Link A.O. Smith from a config entry."""
     hass.data.setdefault(DOMAIN, {})
     
     # Initialize API connection with provided tokens

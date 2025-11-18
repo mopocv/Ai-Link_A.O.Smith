@@ -1,4 +1,4 @@
-"""Config flow for A.O. Smith."""
+"""Config flow for Ai-Link A.O. Smith."""
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
@@ -6,7 +6,7 @@ from homeassistant.core import callback
 from .const import DOMAIN, CONF_USER_ID, CONF_FAMILY_ID, CONF_ACCESS_TOKEN, CONF_DEVICE_ID, CONF_MOBILE
 
 class AOSmithConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for A.O. Smith."""
+    """Handle a config flow for Ai-Link A.O. Smith."""
     
     VERSION = 1
     
@@ -93,7 +93,7 @@ class AOSmithConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self._api.close()
         
         return self.async_create_entry(
-            title=f"A.O. Smith - {device_name}",
+            title=f"Ai-Link A.O. Smith - {device_name}",
             data=user_input
         )
     

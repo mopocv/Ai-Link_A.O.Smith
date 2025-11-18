@@ -9,7 +9,7 @@ from .const import DOMAIN, SENSOR_TYPES
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up A.O. Smith sensor platform."""
+    """Set up Ai-Link A.O. Smith sensor platform."""
     api = hass.data[DOMAIN][config_entry.entry_id]
     device_id = config_entry.data.get("device_id")
     
@@ -25,7 +25,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     async_add_entities(entities, True)
 
 class AOSmithSensor(SensorEntity):
-    """Representation of an A.O. Smith sensor."""
+    """Representation of an Ai-Link A.O. Smith sensor."""
     
     def __init__(self, api, device_id, sensor_type):
         """Initialize the sensor."""
@@ -34,8 +34,8 @@ class AOSmithSensor(SensorEntity):
         self._sensor_type = sensor_type
         
         name, unit, icon = SENSOR_TYPES[sensor_type]
-        self._attr_name = f"A.O. Smith {name}"
-        self._attr_unique_id = f"aosmith_{sensor_type}_{device_id}"
+        self._attr_name = f"Ai-Link A.O. Smith {name}"
+        self._attr_unique_id = f"ailink_aosmith_{sensor_type}_{device_id}"
         self._attr_unit_of_measurement = unit
         self._attr_icon = icon
         
