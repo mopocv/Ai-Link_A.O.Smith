@@ -17,7 +17,7 @@ class AOSmithAPI:
         self._access_token = access_token
         self._user_id = user_id
         self._family_id = family_id
-        self._cookie = cookie or "cna=130fe055be754d199cb6efba84e9b020"  # 默认值作为fallback
+        self._cookie = cookie
         self._mobile = mobile
         self._session: Optional[aiohttp.ClientSession] = None
         
