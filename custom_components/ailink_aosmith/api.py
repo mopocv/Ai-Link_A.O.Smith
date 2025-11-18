@@ -38,48 +38,72 @@ class AOSmithAPI:
         
         headers = await self._generate_headers(payload)
         
+        _LOGGER.debug("Getting devices with payload: %s", payload)
+        _LOGGER.debug("Using headers: %s", {k: v for k, v in headers.items() if k != 'Authorization'})
+        
         try:
             async with self._session.post(
                 "https://ailink-api.hotwater.com.cn/AiLinkService/appDevice/getHomepageV2",
                 json=payload,
                 headers=headers
             ) as response:
+                response_text = await response.text()
+                _LOGGER.debug("Raw response: %s", response_text)
+                
                 if response.status == 200:
-                    data = await response.json()
-                    _LOGGER.debug("Device list response: %s", json.dumps(data, indent=2))
-                    
-                    if data.get("status") == 200:
-                        info = data.get("info", {})
-                        devices = []
+                    try:
+                        data = await response.json()
+                        _LOGGER.debug("Device list response: %s", json.dumps(data, indent=2))
                         
-                        # Extract from deviceList
-                        if "deviceList" in info:
-                            devices.extend(info["deviceList"])
-                        
-                        # Extract from spaceDeviceMapping  
-                        if "spaceDeviceMapping" in info:
-                            for space_device in info["spaceDeviceMapping"]:
-                                if "appDeviceEntityList" in space_device:
-                                    devices.extend(space_device["appDeviceEntityList"])
-                        
-                        # Filter for water heater devices
-                        water_heaters = [
-                            device for device in devices 
-                            if device.get("productMajorClassCode") == "19"
-                        ]
-                        
-                        _LOGGER.info("Found %d water heater devices", len(water_heaters))
-                        for device in water_heaters:
-                            _LOGGER.info("Device: %s (ID: %s, Model: %s)", 
-                                       device.get("deviceName"), 
-                                       device.get("deviceId"),
-                                       device.get("productModel"))
-                        
-                        return water_heaters
-                    else:
-                        _LOGGER.error("API error: %s", data.get("msg"))
+                        if data.get("status") == 200:
+                            info = data.get("info", {})
+                            _LOGGER.debug("Full info response: %s", json.dumps(info, indent=2))
+                            
+                            devices = []
+                            
+                            # Extract from deviceList
+                            if "deviceList" in info:
+                                devices.extend(info["deviceList"])
+                                _LOGGER.debug("Found %d devices in deviceList", len(info["deviceList"]))
+                            
+                            # Extract from spaceDeviceMapping  
+                            if "spaceDeviceMapping" in info:
+                                for i, space_device in enumerate(info["spaceDeviceMapping"]):
+                                    _LOGGER.debug("Space device mapping %d: %s", i, space_device)
+                                    if "appDeviceEntityList" in space_device:
+                                        devices.extend(space_device["appDeviceEntityList"])
+                                        _LOGGER.debug("Found %d devices in space mapping %d", 
+                                                    len(space_device["appDeviceEntityList"]), i)
+                            
+                            # Log all found devices for debugging
+                            _LOGGER.debug("All found devices: %s", json.dumps(devices, indent=2))
+                            
+                            # Filter for water heater devices (productMajorClassCode = 19)
+                            water_heaters = [
+                                device for device in devices 
+                                if device.get("productMajorClassCode") == "19"
+                            ]
+                            
+                            _LOGGER.info("Found %d water heater devices", len(water_heaters))
+                            for device in water_heaters:
+                                _LOGGER.info("Device: %s (ID: %s, Model: %s, Class: %s)", 
+                                           device.get("deviceName"), 
+                                           device.get("deviceId"),
+                                           device.get("productModel"),
+                                           device.get("productMajorClassCode"))
+                            
+                            if not water_heaters:
+                                _LOGGER.warning("No water heater devices found. All device types: %s", 
+                                              [d.get("productMajorClassCode") for d in devices])
+                            
+                            return water_heaters
+                        else:
+                            _LOGGER.error("API returned error status: %s, message: %s", 
+                                        data.get("status"), data.get("msg"))
+                    except json.JSONDecodeError as e:
+                        _LOGGER.error("Failed to parse JSON response: %s, raw response: %s", e, response_text)
                 else:
-                    _LOGGER.error("HTTP error: %s", response.status)
+                    _LOGGER.error("HTTP error: %s, response: %s", response.status, response_text)
         except Exception as e:
             _LOGGER.error("Failed to get devices: %s", e)
             
@@ -104,16 +128,24 @@ class AOSmithAPI:
                 json=payload,
                 headers=headers
             ) as response:
+                response_text = await response.text()
+                _LOGGER.debug("Device status raw response for %s: %s", device_id, response_text)
+                
                 if response.status == 200:
-                    data = await response.json()
-                    _LOGGER.debug("Device status response for %s: %s", device_id, json.dumps(data, indent=2))
-                    
-                    if data.get("status") == 200:
-                        return data.get("info")
-                    else:
-                        _LOGGER.error("API error for device %s: %s", device_id, data.get("msg"))
+                    try:
+                        data = await response.json()
+                        _LOGGER.debug("Device status response for %s: %s", device_id, json.dumps(data, indent=2))
+                        
+                        if data.get("status") == 200:
+                            return data.get("info")
+                        else:
+                            _LOGGER.error("API error for device %s: %s", device_id, data.get("msg"))
+                    except json.JSONDecodeError as e:
+                        _LOGGER.error("Failed to parse device status JSON for %s: %s, raw: %s", 
+                                    device_id, e, response_text)
                 else:
-                    _LOGGER.error("HTTP error for device %s: %s", device_id, response.status)
+                    _LOGGER.error("HTTP error for device %s: %s, response: %s", 
+                                device_id, response.status, response_text)
         except Exception as e:
             _LOGGER.error("Failed to get device status for %s: %s", device_id, e)
             
@@ -141,14 +173,20 @@ class AOSmithAPI:
                 json=payload,
                 headers=headers
             ) as response:
+                response_text = await response.text()
+                _LOGGER.debug("Account info raw response: %s", response_text)
+                
                 if response.status == 200:
-                    data = await response.json()
-                    if data.get("status") == 200:
-                        return data.get("info")
-                    else:
-                        _LOGGER.error("Account info API error: %s", data.get("msg"))
+                    try:
+                        data = await response.json()
+                        if data.get("status") == 200:
+                            return data.get("info")
+                        else:
+                            _LOGGER.error("Account info API error: %s", data.get("msg"))
+                    except json.JSONDecodeError as e:
+                        _LOGGER.error("Failed to parse account info JSON: %s, raw: %s", e, response_text)
                 else:
-                    _LOGGER.error("Account info HTTP error: %s", response.status)
+                    _LOGGER.error("Account info HTTP error: %s, response: %s", response.status, response_text)
         except Exception as e:
             _LOGGER.error("Failed to get account info: %s", e)
             
@@ -175,7 +213,7 @@ class AOSmithAPI:
             "traceId": f"{timestamp}-69861-{self._user_id}-00",
             "User-Agent": "AI jia zhi kong/2.2.5 (iPhone; iOS 26.0; Scale/3.00)",
             "Cookie": self._cookie,
-            "sign": "",  # 留空
+            "sign": "",
         }
         
         return headers
