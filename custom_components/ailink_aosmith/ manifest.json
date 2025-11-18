@@ -7,5 +7,6 @@
   "dependencies": [],
   "codeowners": ["@mopocv"],
   "config_flow": true,
+  "integration_type": "hub",
   "iot_class": "cloud_polling"
 }
