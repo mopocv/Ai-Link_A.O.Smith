@@ -44,7 +44,7 @@ class AOSmithConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required(CONF_ACCESS_TOKEN): str,
             vol.Required(CONF_USER_ID): str,
             vol.Required(CONF_FAMILY_ID): str,
-            vol.Optional(CONF_COOKIE, default="cna=130fe055be754d199cb6efba84e9b020"): str,
+            vol.Optional(CONF_COOKIE): str,
             vol.Optional(CONF_MOBILE): str,
         })
         
@@ -53,7 +53,7 @@ class AOSmithConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=data_schema,
             errors=errors,
             description_placeholders={
-                "cookie_info": "通常为: cna=130fe055be754d199cb6efba84e9b020"
+                "cookie_info": "通常为: cna=xxxxxxx"
             }
         )
     
