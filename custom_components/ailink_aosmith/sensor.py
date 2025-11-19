@@ -13,13 +13,9 @@ TRANSLATION_DIR = "translations"
 
 
 # ------------------------------------------------------------
-# 加载多语言 JSON 配置
+# 加载翻译 JSON（传感器定义）
 # ------------------------------------------------------------
 def load_config(hass, lang):
-    """
-    Load sensor mapping rules from translations/<lang>.json
-    Example: zh-Hans.json / en.json
-    """
     file_path = os.path.join(
         hass.config.path("custom_components", DOMAIN, TRANSLATION_DIR),
         f"{lang}.json",
@@ -48,19 +44,40 @@ async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
 
     entities = []
-    for device_id, device in coordinator.data.items():
-        # 静态映射传感器
+    for device_id, _dev in coordinator.data.items():
+        # 静态映射字段
         for key in mapping.keys():
             entities.append(AOSmithSensor(coordinator, device_id, key, mapping))
 
-        # 动态原始传感器（statusInfo 里面出来的）
+        # 补充：添加所有动态字段
         entities.append(AOSmithRawSensor(coordinator, device_id))
 
     async_add_entities(entities)
 
 
 # ------------------------------------------------------------
-# 静态映射传感器
+# 工具：解析 statusInfo → outputData
+# ------------------------------------------------------------
+def extract_output_data(device_data):
+    """Return dict of outputData from statusInfo."""
+    try:
+        raw = device_data.get("statusInfo")
+        if not raw:
+            return {}
+
+        status = json.loads(raw)
+        events = status.get("events", [])
+        for ev in events:
+            if ev.get("identifier") == "post":
+                return ev.get("outputData", {})
+
+        return {}
+    except Exception:
+        return {}
+
+
+# ------------------------------------------------------------
+# 静态传感器（mapping 定义的）
 # ------------------------------------------------------------
 class AOSmithSensor(AOSmithEntity, SensorEntity):
     """Sensor mapped via JSON config."""
@@ -70,52 +87,32 @@ class AOSmithSensor(AOSmithEntity, SensorEntity):
         self._key = key
         cfg = mapping.get(key, {})
 
-        # 名称/图标
         self._attr_name = cfg.get("name", key)
         self._attr_icon = cfg.get("icon")
         self._attr_unique_id = f"{DOMAIN}_{device_id}_{key}"
-
-        # 🔥 正确：HA 2024+ 使用 native_unit_of_measurement
         self._attr_native_unit_of_measurement = cfg.get("unit")
 
-        # 分组
         self._group = cfg.get("group", "other")
 
     @property
     def native_value(self):
-        """Return mapped value from device data."""
-        data = self.device_data
-        return data.get(self._key)
+        """Return value from outputData."""
+        output = extract_output_data(self.device_data)
+        return output.get(self._key)
 
 
 # ------------------------------------------------------------
-# 动态传感器（所有未映射的字段）
+# 动态传感器（未映射字段）
 # ------------------------------------------------------------
 class AOSmithRawSensor(AOSmithEntity, SensorEntity):
-    """Expose dynamic raw fields from Ai-Link device."""
+    """Expose unmapped outputData fields."""
 
     def __init__(self, coordinator, device_id):
         super().__init__(coordinator, device_id)
-        self._prefix = "raw_"
         self._attr_name = f"Raw Sensors {device_id}"
         self._attr_unique_id = f"{DOMAIN}_{device_id}_raw"
 
     @property
     def extra_state_attributes(self):
-        """Return all raw fields except those already mapped."""
-        raw = {}
-        data = self.device_data or {}
-
-        # 自带字段不暴露
-        blacklist = {
-            "productName",
-            "productModel",
-            "statusInfo",
-            "deviceId",
-        }
-
-        for k, v in data.items():
-            if k not in blacklist:
-                raw[k] = v
-
-        return raw
+        """Return raw outputData for debugging."""
+        return extract_output_data(self.device_data)
