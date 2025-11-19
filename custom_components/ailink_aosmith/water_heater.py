@@ -1,191 +1,193 @@
-"""Platform for water_heater integration."""
+"""Support for A.O. Smith water heaters."""
+from __future__ import annotations
+
+import json
 import logging
 from typing import Any
 
 from homeassistant.components.water_heater import (
     WaterHeaterEntity,
-    STATE_ECO,
-    STATE_PERFORMANCE,
-    SUPPORT_OPERATION_MODE,
-    SUPPORT_TARGET_TEMPERATURE,
+    WaterHeaterEntityFeature,
 )
-from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
+from .entity import AOSmithEntity
 
 _LOGGER = logging.getLogger(__name__)
 
-SUPPORT_FLAGS = SUPPORT_OPERATION_MODE | SUPPORT_TARGET_TEMPERATURE
-OPERATION_MODES = [STATE_ECO, STATE_PERFORMANCE]
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up A.O. Smith water heater from a config entry."""
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    
+    # Wait for initial data to be loaded
+    await coordinator.async_config_entry_first_refresh()
+    
+    entities = []
+    for device_id in coordinator.data:
+        device_data = coordinator.data[device_id]
+        # Only create water heater entities for actual water heater devices
+        if device_data.get("deviceCategory") == "19":  # Water heater device category
+            entities.append(AOSmithWaterHeater(coordinator, device_id))
+    
+    _LOGGER.info("Setting up %d water heater entities", len(entities))
+    async_add_entities(entities)
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up Ai-Link A.O. Smith water_heater platform."""
-    api = hass.data[DOMAIN][config_entry.entry_id]
-    
-    # Get device ID from config
-    device_id = config_entry.data.get("device_id")
-    
-    if device_id:
-        # Get device details
-        devices = await api.async_get_devices()
-        device = next((d for d in devices if d["deviceId"] == device_id), None)
-        
-        if device:
-            entities = [AOSmithWaterHeater(api, device)]
-            async_add_entities(entities, True)
-        else:
-            _LOGGER.error("Device %s not found in device list", device_id)
-    else:
-        _LOGGER.error("No device ID configured")
+class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
+    """Representation of an A.O. Smith water heater."""
 
-class AOSmithWaterHeater(WaterHeaterEntity):
-    """Representation of an Ai-Link A.O. Smith water heater."""
-    
-    def __init__(self, api, device):
+    _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_operation_list = ["off", "heat"]
+
+    def __init__(self, coordinator, device_id):
         """Initialize the water heater."""
-        self._api = api
-        self._device = device
-        self._device_id = device["deviceId"]
-        self._attr_name = device.get("deviceName", "Ai-Link A.O. Smith Water Heater")
-        self._attr_unique_id = f"ailink_aosmith_water_heater_{self._device_id}"
+        super().__init__(coordinator, device_id)
+        self._attr_name = self.device_data.get("productName", "A.O. Smith Water Heater")
+        self._attr_unique_id = f"{device_id}_water_heater"
         
-        self._current_temperature = None
-        self._target_temperature = None
-        self._operation_mode = STATE_ECO
-        self._attributes = {}
+        # Set supported features for HomeKit compatibility
+        self._attr_supported_features = (
+            WaterHeaterEntityFeature.TARGET_TEMPERATURE | 
+            WaterHeaterEntityFeature.OPERATION_MODE
+        )
         
-        # Set device info for HA
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, self._device_id)},
-            "name": self._attr_name,
-            "manufacturer": "A.O. Smith",
-            "model": device.get("productModel", "Unknown"),
-            "sw_version": device.get("firmwareVersion", "Unknown"),
-        }
-    
+        # HomeKit specific attributes
+        self._attr_precision = 1.0  # Temperature precision for HomeKit
+
     @property
-    def supported_features(self):
-        """Return the list of supported features."""
-        return SUPPORT_FLAGS
-    
-    @property
-    def temperature_unit(self):
-        """Return the unit of measurement."""
-        return TEMP_CELSIUS
-    
-    @property
-    def current_temperature(self):
-        """Return the current temperature."""
-        return self._current_temperature
-    
-    @property
-    def target_temperature(self):
-        """Return the temperature we try to reach."""
-        return self._target_temperature
-    
-    @property
-    def min_temp(self):
-        """Return the minimum temperature."""
-        return 35  # Typical minimum for gas water heaters
-    
-    @property
-    def max_temp(self):
-        """Return the maximum temperature."""
-        return 60  # Typical maximum for gas water heaters
-    
-    @property
-    def operation_list(self):
-        """Return the list of available operation modes."""
-        return OPERATION_MODES
-    
-    @property
-    def current_operation(self):
-        """Return current operation mode."""
-        return self._operation_mode
-    
-    @property
-    def extra_state_attributes(self):
-        """Return device specific state attributes."""
-        return self._attributes
-    
-    async def async_set_temperature(self, **kwargs):
-        """Set new target temperature."""
-        temperature = kwargs.get(ATTR_TEMPERATURE)
-        if temperature is not None:
-            # This would need to be implemented once we find the control API
-            _LOGGER.info("Would set temperature to %s for device %s", temperature, self._device_id)
-            self._target_temperature = temperature
-    
-    async def async_set_operation_mode(self, operation_mode):
-        """Set new operation mode."""
-        # This would need to be implemented once we find the control API
-        _LOGGER.info("Would set operation mode to %s for device %s", operation_mode, self._device_id)
-        self._operation_mode = operation_mode
-    
-    async def async_update(self):
-        """Fetch new state data for the water heater."""
-        status = await self._api.async_get_device_status(self._device_id)
-        
-        if status and "appDeviceStatusInfoEntity" in status:
-            status_entity = status["appDeviceStatusInfoEntity"]
-            status_info = status_entity.get("statusInfo", "")
+    def current_operation(self) -> str | None:
+        """Return current operation."""
+        status_info = self.device_data.get("statusInfo")
+        if not status_info:
+            return "off"
             
-            if status_info:
-                await self._parse_status_info(status_info)
-        
-        # Also update device info from space mapping if available
-        if "appSpaceDeviceMappingEntity" in status:
-            space_info = status["appSpaceDeviceMappingEntity"]
-            if space_info.get("roomName"):
-                self._attributes["location"] = space_info["roomName"]
-    
-    async def _parse_status_info(self, status_info: str):
-        """Parse the status info JSON."""
-        import json
         try:
-            data = json.loads(status_info)
-            events = data.get("events", [])
-            
+            status_data = json.loads(status_info)
+            events = status_data.get("events", [])
             for event in events:
                 if event.get("identifier") == "post":
                     output_data = event.get("outputData", {})
-                    
-                    # Extract temperature data
-                    self._current_temperature = self._safe_int(output_data.get("waterTemp"))
-                    self._target_temperature = self._safe_int(output_data.get("waterTemp"))
-                    
-                    # Determine operation mode based on power status
+                    # Check if device is heating based on water temperature
+                    water_temp = self._get_float_value(output_data, "waterTemp")
                     power_status = output_data.get("powerStatus")
-                    device_status = output_data.get("deviceStatus")
                     
-                    if power_status == "1" and device_status == 1:
-                        self._operation_mode = STATE_PERFORMANCE
-                    else:
-                        self._operation_mode = STATE_ECO
-                    
-                    # Extract additional attributes
-                    self._attributes.update({
-                        "water_flow": output_data.get("waterFlow"),
-                        "in_water_temp": output_data.get("inWaterTemp"),
-                        "out_water_temp": output_data.get("outWaterTemp"),
-                        "fire_times": output_data.get("fireTimes"),
-                        "fan_speed": output_data.get("fanSpeed"),
-                        "device_status": device_status,
-                        "power_status": power_status,
-                        "error_code": output_data.get("errorCode"),
-                        "co_concentration": output_data.get("cOConcentration"),
-                        "total_water_num": output_data.get("totalWaterNum"),
-                        "total_gas_num": output_data.get("totalGasNum"),
-                        "work_status": output_data.get("workStatus"),
-                        "cruise_status": output_data.get("cruiseStatus"),
-                    })
-                    
-        except json.JSONDecodeError as e:
-            _LOGGER.error("Failed to parse status info JSON for device %s: %s", self._device_id, e)
-    
-    def _safe_int(self, value):
-        """Safely convert to integer."""
-        try:
-            return int(value) if value is not None else None
-        except (ValueError, TypeError):
+                    # HomeKit expects "heat" when actively heating
+                    if power_status == "1" and water_temp is not None and water_temp > 0:
+                        return "heat"
+            return "off"
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            _LOGGER.debug("Error parsing status info for %s: %s", self.device_id, e)
+            return "off"
+
+    @property
+    def current_temperature(self) -> float | None:
+        """Return the current water temperature."""
+        status_info = self.device_data.get("statusInfo")
+        if not status_info:
             return None
+            
+        try:
+            status_data = json.loads(status_info)
+            events = status_data.get("events", [])
+            for event in events:
+                if event.get("identifier") == "post":
+                    output_data = event.get("outputData", {})
+                    temp = self._get_float_value(output_data, "waterTemp")
+                    # HomeKit requires temperature values
+                    return temp if temp is not None else 0.0
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            _LOGGER.debug("Error getting current temperature for %s: %s", self.device_id, e)
+            
+        return 0.0  # Default for HomeKit compatibility
+
+    @property
+    def target_temperature(self) -> float | None:
+        """Return the temperature we try to reach."""
+        # For HomeKit, we need to return a target temperature
+        # If we don't have a specific target, use current temperature
+        current_temp = self.current_temperature
+        if current_temp is not None:
+            return current_temp
+            
+        # Fallback for HomeKit
+        return 40.0
+
+    @property
+    def min_temp(self) -> float:
+        """Return the minimum temperature."""
+        return 35.0  # HomeKit compatible minimum
+
+    @property
+    def max_temp(self) -> float:
+        """Return the maximum temperature."""
+        return 75.0  # HomeKit compatible maximum
+
+    def _get_float_value(self, data: dict, key: str) -> float | None:
+        """Safely get a float value from dictionary."""
+        value = data.get(key)
+        if value is None:
+            return None
+            
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            _LOGGER.debug("Cannot convert %s to float for key %s", value, key)
+            return None
+
+    async def async_set_temperature(self, **kwargs: Any) -> None:
+        """Set new target temperature."""
+        temperature = kwargs.get(ATTR_TEMPERATURE)
+        if temperature is not None:
+            _LOGGER.info("Setting temperature for %s to %s", self.device_id, temperature)
+            # TODO: Implement API call to set temperature
+            # For now, update the coordinator data to reflect the change
+            self.device_data["target_temperature"] = temperature
+            self.async_write_ha_state()
+            _LOGGER.warning("Temperature setting not yet implemented for device %s", self.device_id)
+
+    async def async_set_operation_mode(self, operation_mode: str) -> None:
+        """Set new operation mode."""
+        _LOGGER.info("Setting operation mode for %s to %s", self.device_id, operation_mode)
+        # TODO: Implement API call to set operation mode
+        # For now, update the coordinator data to reflect the change
+        self.device_data["operation_mode"] = operation_mode
+        self.async_write_ha_state()
+        _LOGGER.warning("Operation mode setting not yet implemented for device %s", self.device_id)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return additional state attributes."""
+        attrs = {}
+        
+        status_info = self.device_data.get("statusInfo")
+        if status_info:
+            try:
+                status_data = json.loads(status_info)
+                events = status_data.get("events", [])
+                for event in events:
+                    if event.get("identifier") == "post":
+                        output_data = event.get("outputData", {})
+                        
+                        # Add relevant status information as attributes
+                        attrs["water_flow"] = self._get_float_value(output_data, "waterFlow")
+                        attrs["in_water_temp"] = self._get_float_value(output_data, "inWaterTemp")
+                        attrs["out_water_temp"] = self._get_float_value(output_data, "outWaterTemp")
+                        attrs["fire_work_time"] = output_data.get("fireWorkTime")
+                        attrs["total_water_num"] = output_data.get("totalWaterNum")
+                        attrs["error_code"] = output_data.get("errorCode")
+                        
+                        # HomeKit friendly attributes
+                        attrs["power_status"] = output_data.get("powerStatus")
+                        attrs["device_status"] = output_data.get("deviceStatus")
+                        break
+            except (json.JSONDecodeError, KeyError, TypeError) as e:
+                _LOGGER.debug("Error parsing status info for attributes: %s", e)
+        
+        return attrs

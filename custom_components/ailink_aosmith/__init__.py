@@ -1,22 +1,22 @@
 """The Ai-Link A.O. Smith integration."""
 import asyncio
 import logging
+from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import DOMAIN
+from .const import DOMAIN, PLATFORMS, UPDATE_INTERVAL
 from .api import AOSmithAPI
 
 _LOGGER = logging.getLogger(__name__)
-
-PLATFORMS = ["water_heater", "sensor"]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Ai-Link A.O. Smith from a config entry."""
     hass.data.setdefault(DOMAIN, {})
     
-    # Initialize API connection with provided tokens
+    # Initialize API
     api = AOSmithAPI(
         access_token=entry.data["access_token"],
         user_id=entry.data["user_id"],
@@ -26,7 +26,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     
     await api.async_authenticate()
-    hass.data[DOMAIN][entry.entry_id] = api
+    
+    # Create coordinator
+    coordinator = AOSmithDataUpdateCoordinator(hass, api)
+    
+    # Store coordinator
+    hass.data[DOMAIN][entry.entry_id] = coordinator
+    
+    # Fetch initial data
+    await coordinator.async_config_entry_first_refresh()
     
     # Set up platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -35,17 +43,46 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = all(
-        await asyncio.gather(
-            *[
-                hass.config_entries.async_forward_entry_unload(entry, platform)
-                for platform in PLATFORMS
-            ]
-        )
-    )
-    
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        api = hass.data[DOMAIN].pop(entry.entry_id)
-        await api.close()
+        coordinator = hass.data[DOMAIN][entry.entry_id]
+        await coordinator.api.close()
+        hass.data[DOMAIN].pop(entry.entry_id)
     
     return unload_ok
+
+class AOSmithDataUpdateCoordinator(DataUpdateCoordinator):
+    """Class to manage fetching A.O. Smith data."""
+    
+    def __init__(self, hass, api):
+        """Initialize global data updater."""
+        self.api = api
+        self.data = {}
+        
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=DOMAIN,
+            update_interval=timedelta(seconds=UPDATE_INTERVAL),
+        )
+    
+    async def _async_update_data(self):
+        """Fetch data from API."""
+        try:
+            devices = await self.api.async_get_devices()
+            
+            data = {}
+            for device in devices:
+                device_id = device.get("deviceId")
+                if device_id:
+                    # Get device status
+                    status = await self.api.async_get_device_status(device_id)
+                    if status:
+                        device.update(status)
+                    data[device_id] = device
+            
+            _LOGGER.debug("Updated data for %d devices", len(data))
+            return data
+        except Exception as err:
+            _LOGGER.error("Error updating A.O. Smith data: %s", err)
+            raise

@@ -89,10 +89,10 @@ class AOSmithAPI:
                             _LOGGER.info("Found %d water heater devices", len(water_heaters))
                             for device in water_heaters:
                                 _LOGGER.info("Device: %s (ID: %s, Category: %s, Model: %s)", 
-                                        device.get("productName"), 
-                                        device.get("deviceId"),
-                                        device.get("deviceCategory"),
-                                        device.get("deviceModel"))
+                                           device.get("productName"), 
+                                           device.get("deviceId"),
+                                           device.get("deviceCategory"),
+                                           device.get("deviceModel"))
                             
                             if not water_heaters:
                                 # 如果没有找到热水器，记录所有设备的类别用于调试
@@ -101,9 +101,9 @@ class AOSmithAPI:
                                 # 也记录所有设备ID和名称
                                 for device in devices:
                                     _LOGGER.warning("Available device: ID=%s, Name=%s, Category=%s", 
-                                                device.get("deviceId"), 
-                                                device.get("productName"),
-                                                device.get("deviceCategory"))
+                                                  device.get("deviceId"), 
+                                                  device.get("productName"),
+                                                  device.get("deviceCategory"))
                             
                             return water_heaters
                         else:
@@ -117,7 +117,7 @@ class AOSmithAPI:
             _LOGGER.error("Failed to get devices: %s", e)
             
         return []
-
+    
     async def async_get_device_status(self, device_id: str) -> Optional[Dict[str, Any]]:
         """Get current device status."""
         encode = self._generate_encode(device_id)

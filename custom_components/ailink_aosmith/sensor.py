@@ -1,65 +1,64 @@
 """Platform for sensor integration."""
 import logging
+import json
 
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.const import TEMP_CELSIUS, VOLUME_LITERS_PER_MINUTE
+from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
+from homeassistant.const import UnitOfTemperature, UnitOfVolume
 
 from .const import DOMAIN, SENSOR_TYPES
+from .entity import AOSmithEntity
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Ai-Link A.O. Smith sensor platform."""
-    api = hass.data[DOMAIN][config_entry.entry_id]
-    device_id = config_entry.data.get("device_id")
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
     
-    if not device_id:
-        _LOGGER.error("No device ID configured")
-        return
+    # Wait for initial data to be loaded
+    await coordinator.async_config_entry_first_refresh()
     
-    # Create sensors for each type
     entities = []
-    for sensor_type in SENSOR_TYPES:
-        entities.append(AOSmithSensor(api, device_id, sensor_type))
+    for device_id in coordinator.data:
+        device_data = coordinator.data[device_id]
+        # Only create sensors for water heater devices
+        if device_data.get("deviceCategory") == "19":  # Water heater device category
+            for sensor_type in SENSOR_TYPES:
+                entities.append(AOSmithSensor(coordinator, device_id, sensor_type))
     
+    _LOGGER.info("Setting up %d sensor entities", len(entities))
     async_add_entities(entities, True)
 
-class AOSmithSensor(SensorEntity):
+class AOSmithSensor(AOSmithEntity, SensorEntity):
     """Representation of an Ai-Link A.O. Smith sensor."""
     
-    def __init__(self, api, device_id, sensor_type):
+    def __init__(self, coordinator, device_id, sensor_type):
         """Initialize the sensor."""
-        self._api = api
+        self.coordinator = coordinator
         self._device_id = device_id
         self._sensor_type = sensor_type
         
-        name, unit, icon = SENSOR_TYPES[sensor_type]
-        self._attr_name = f"Ai-Link A.O. Smith {name}"
+        name, unit, icon, device_class = SENSOR_TYPES[sensor_type]
+        self._attr_name = f"{self.device_data.get('productName', 'A.O. Smith')} {name}"
         self._attr_unique_id = f"ailink_aosmith_{sensor_type}_{device_id}"
-        self._attr_unit_of_measurement = unit
+        self._attr_native_unit_of_measurement = unit
         self._attr_icon = icon
+        self._attr_device_class = device_class
         
-        self._state = None
-    
+        # HomeKit compatibility - ensure state_class is set for appropriate sensors
+        if device_class in [SensorDeviceClass.TEMPERATURE, SensorDeviceClass.CO]:
+            self._attr_state_class = "measurement"
+
     @property
-    def state(self):
+    def native_value(self):
         """Return the state of the sensor."""
-        return self._state
+        return self._get_sensor_value()
     
-    async def async_update(self):
-        """Fetch new state data for the sensor."""
-        status = await self._api.async_get_device_status(self._device_id)
-        
-        if status and "appDeviceStatusInfoEntity" in status:
-            status_entity = status["appDeviceStatusInfoEntity"]
-            status_info = status_entity.get("statusInfo", "")
+    def _get_sensor_value(self):
+        """Get the sensor value from device data."""
+        status_info = self.device_data.get("statusInfo")
+        if not status_info:
+            return None
             
-            if status_info:
-                await self._parse_status_info(status_info)
-    
-    async def _parse_status_info(self, status_info: str):
-        """Parse the status info JSON."""
-        import json
         try:
             data = json.loads(status_info)
             events = data.get("events", [])
@@ -70,20 +69,66 @@ class AOSmithSensor(SensorEntity):
                     
                     # Map sensor types to data fields
                     sensor_mapping = {
-                        "water_temp": output_data.get("waterTemp"),
-                        "in_water_temp": output_data.get("inWaterTemp"),
-                        "out_water_temp": output_data.get("outWaterTemp"), 
-                        "water_flow": output_data.get("waterFlow"),
-                        "fire_times": output_data.get("fireTimes"),
-                        "total_water_num": output_data.get("totalWaterNum"),
-                        "total_gas_num": output_data.get("totalGasNum"),
-                        "fan_speed": output_data.get("fanSpeed"),
-                        "co_concentration": output_data.get("cOConcentration"),
-                        "device_status": output_data.get("deviceStatus"),
-                        "power_status": output_data.get("powerStatus"),
+                        "water_temp": self._get_float_value(output_data, "waterTemp"),
+                        "in_water_temp": self._get_float_value(output_data, "inWaterTemp"),
+                        "out_water_temp": self._get_float_value(output_data, "outWaterTemp"), 
+                        "water_flow": self._get_float_value(output_data, "waterFlow"),
+                        "fire_times": self._get_int_value(output_data, "fireTimes"),
+                        "total_water_num": self._get_int_value(output_data, "totalWaterNum"),
+                        "total_gas_num": self._get_int_value(output_data, "totalGasNum"),
+                        "fan_speed": self._get_int_value(output_data, "fanSpeed"),
+                        "co_concentration": self._get_float_value(output_data, "cOConcentration"),
+                        "device_status": self._get_device_status(output_data),
+                        "power_status": self._get_power_status(output_data),
                     }
                     
-                    self._state = sensor_mapping.get(self._sensor_type)
+                    value = sensor_mapping.get(self._sensor_type)
                     
-        except json.JSONDecodeError as e:
-            _LOGGER.error("Failed to parse status info JSON for sensor %s: %s", self._sensor_type, e)
+                    # Ensure numeric values for HomeKit compatibility
+                    if value is None and self._sensor_type in ["water_temp", "in_water_temp", "out_water_temp"]:
+                        return 0.0
+                    
+                    return value
+                    
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            _LOGGER.debug("Error parsing status info for sensor %s: %s", self._sensor_type, e)
+            
+        return None
+    
+    def _get_float_value(self, data, key):
+        """Get float value from data."""
+        value = data.get(key)
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return None
+    
+    def _get_int_value(self, data, key):
+        """Get int value from data."""
+        value = data.get(key)
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return None
+    
+    def _get_device_status(self, data):
+        """Get device status as readable string."""
+        status = data.get("deviceStatus")
+        if status == "1":
+            return "Online"
+        elif status == "0":
+            return "Offline"
+        return "Unknown"
+    
+    def _get_power_status(self, data):
+        """Get power status as readable string."""
+        status = data.get("powerStatus")
+        if status == "1":
+            return "On"
+        elif status == "0":
+            return "Off"
+        return "Unknown"
