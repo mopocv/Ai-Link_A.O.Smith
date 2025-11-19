@@ -1,4 +1,4 @@
-"""Support for A.O. Smith water heaters with multi-language operation modes and zero cold water modes."""
+"""Support for A.O. Smith water heaters with temperature and zero cold water mode control."""
 from __future__ import annotations
 
 import json
@@ -16,7 +16,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .entity import AOSmithEntity
-from .api import AOSmithAPI
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,14 +29,12 @@ async def async_setup_entry(
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
     await coordinator.async_config_entry_first_refresh()
 
-    # operation mode map
-    lang_code = getattr(hass.config, "language", "zh-Hans")
     config_json = getattr(coordinator, "config_json", {})
     operation_mode_map = config_json.get("entity", {}).get("water_heater", {}).get("operation_mode", {})
 
     entities = []
     for device_id, device_data in coordinator.data.items():
-        if device_data.get("deviceCategory") == "19":  # Water heater
+        if device_data.get("deviceCategory") == "19":
             entities.append(AOSmithWaterHeater(coordinator, device_id, operation_mode_map))
 
     _LOGGER.info("Setting up %d water heater entities", len(entities))
@@ -45,10 +42,9 @@ async def async_setup_entry(
 
 
 class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
-    """Representation of an A.O. Smith water heater with zero cold water modes."""
+    """A.O. Smith water heater with temperature and zero cold water modes."""
 
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
-    _attr_operation_list = ["off", "heat"]
 
     def __init__(self, coordinator, device_id: str, operation_mode_map: dict):
         super().__init__(coordinator, device_id)
@@ -62,13 +58,13 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
         self._attr_precision = 1.0
         self._operation_mode_map = operation_mode_map
         self._zero_cold_water_status = "off"  # "one_key" / "half_pipe" / "off"
+        self._attr_operation_list = ["off", "heat", "one_key", "half_pipe"]
 
-    @property
-    def current_operation(self) -> str | None:
-        """Return current operation: heat or off."""
+    def _is_heating(self):
+        """Return True if water heater is currently heating."""
         status_info = self.device_data.get("statusInfo")
         if not status_info:
-            return "off"
+            return False
         try:
             data = json.loads(status_info)
             events = data.get("events", [])
@@ -77,19 +73,26 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
                     output_data = event.get("outputData", {})
                     power_status = output_data.get("powerStatus")
                     water_temp = output_data.get("waterTemp")
-                    if power_status == "1" and water_temp and float(water_temp) > 0:
-                        return "heat"
-            return "off"
+                    return power_status == "1" and water_temp and float(water_temp) > 0
         except Exception:
-            return "off"
+            return False
+        return False
+
+    @property
+    def current_operation(self) -> str:
+        """Return current operation mode."""
+        if self._zero_cold_water_status != "off":
+            return self._zero_cold_water_status
+        return "heat" if self._is_heating() else "off"
 
     @property
     def operation_list(self) -> list[str]:
-        """Return translated operation modes."""
+        """Return supported operation modes."""
         return [self._operation_mode_map.get(op, op) for op in self._attr_operation_list]
 
     @property
     def current_temperature(self) -> float | None:
+        """Return current water temperature."""
         status_info = self.device_data.get("statusInfo")
         if not status_info:
             return None
@@ -105,7 +108,7 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
 
     @property
     def target_temperature(self) -> float | None:
-        return self.device_data.get("target_temperature", self.current_temperature or 40.0)
+        return float(self.device_data.get("target_temperature", self.current_temperature or 40.0))
 
     @property
     def min_temp(self) -> float:
@@ -117,79 +120,44 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         temperature = kwargs.get(ATTR_TEMPERATURE)
-        if temperature is None:
-            return
-        self.device_data["target_temperature"] = temperature
-        self.async_write_ha_state()
-        _LOGGER.info("Set target temperature for %s to %s", self.device_id, temperature)
-
-        # 下发 API 命令
-        api: AOSmithAPI = getattr(self.coordinator, "api", None)
-        if api and api.is_authenticated:
-            result = await api.async_send_command(
-                device_id=self.device_id,
-                service_identifier="WaterTempSet",
-                input_data={"waterTemp": str(int(temperature))}
-            )
-            if result and result.get("status") == 200:
-                _LOGGER.info("Temperature command sent successfully for %s", self.device_id)
-            else:
-                _LOGGER.warning("Failed to send temperature command for %s: %s", self.device_id, result)
+        if temperature is not None:
+            self.device_data["target_temperature"] = temperature
+            self.async_write_ha_state()
+            _LOGGER.info("Setting temperature for %s to %s", self.device_id, temperature)
+            # 调用 API 下发温度命令
+            if hasattr(self.coordinator, "api"):
+                try:
+                    await self.coordinator.api.async_set_temperature(self.device_id, temperature)
+                except Exception as e:
+                    _LOGGER.error("Failed to set temperature for %s: %s", self.device_id, e)
 
     async def async_set_operation_mode(self, operation_mode: str) -> None:
+        """Set operation mode including zero cold water modes."""
         internal_mode = None
-        for key, val in self._operation_mode_map.items():
-            if val == operation_mode:
-                internal_mode = key
-                break
-        if internal_mode is None:
+        if operation_mode in ["one_key", "half_pipe"]:
+            internal_mode = operation_mode
+            self._zero_cold_water_status = internal_mode
+            # 调用 API 下发零冷水模式命令
+            if hasattr(self.coordinator, "api"):
+                try:
+                    await self.coordinator.api.async_set_zero_cold_water(self.device_id, internal_mode)
+                except Exception as e:
+                    _LOGGER.error("Failed to set zero cold water mode for %s: %s", self.device_id, e)
+        else:
+            for key, val in self._operation_mode_map.items():
+                if val == operation_mode:
+                    internal_mode = key
+                    # 调用 API 设置普通模式
+                    if hasattr(self.coordinator, "api"):
+                        try:
+                            await self.coordinator.api.async_set_operation_mode(self.device_id, internal_mode)
+                        except Exception as e:
+                            _LOGGER.error("Failed to set operation mode for %s: %s", self.device_id, e)
+        if internal_mode:
+            self.device_data["operation_mode"] = internal_mode
+            self.async_write_ha_state()
+        else:
             _LOGGER.warning("Unknown operation mode: %s", operation_mode)
-            return
-
-        self.device_data["operation_mode"] = internal_mode
-        self.async_write_ha_state()
-        _LOGGER.info("Set operation mode for %s to %s", self.device_id, internal_mode)
-
-        # 下发 API 命令
-        api: AOSmithAPI = getattr(self.coordinator, "api", None)
-        if api and api.is_authenticated:
-            result = await api.async_send_command(
-                device_id=self.device_id,
-                service_identifier="ModeSet",
-                input_data={"mode": internal_mode}
-            )
-            if result and result.get("status") == 200:
-                _LOGGER.info("Operation mode command sent successfully for %s", self.device_id)
-            else:
-                _LOGGER.warning("Failed to send operation mode command for %s: %s", self.device_id, result)
-
-    async def async_set_zero_cold_water(self, mode: str) -> None:
-        """Set zero cold water mode: 'one_key', 'half_pipe', or 'off'."""
-        if mode not in ["one_key", "half_pipe", "off"]:
-            _LOGGER.warning("Invalid zero cold water mode: %s", mode)
-            return
-        self._zero_cold_water_status = mode
-        self.async_write_ha_state()
-        _LOGGER.info("Set zero cold water mode for %s to %s", self.device_id, mode)
-
-        # 下发 API 命令
-        api: AOSmithAPI = getattr(self.coordinator, "api", None)
-        if api and api.is_authenticated:
-            service_map = {
-                "one_key": "OneKeyZeroColdWater",
-                "half_pipe": "HalfPipeZeroColdWater",
-                "off": "CloseZeroColdWater"
-            }
-            service_identifier = service_map.get(mode)
-            result = await api.async_send_command(
-                device_id=self.device_id,
-                service_identifier=service_identifier,
-                input_data={}
-            )
-            if result and result.get("status") == 200:
-                _LOGGER.info("Zero cold water command sent successfully for %s", self.device_id)
-            else:
-                _LOGGER.warning("Failed to send zero cold water command for %s: %s", self.device_id, result)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
