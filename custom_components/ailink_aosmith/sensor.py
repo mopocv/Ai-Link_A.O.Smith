@@ -11,7 +11,7 @@ from .entity import AOSmithEntity
 _LOGGER = logging.getLogger(__name__)
 
 # JSON 文件目录
-CONFIG_DIR = os.path.dirname(__file__)
+CONFIG_DIR = os.path.join(os.path.dirname(__file__), "translations")
 
 def load_config(hass, lang_code="zh-Hans"):
     """根据语言加载 JSON 配置文件."""
