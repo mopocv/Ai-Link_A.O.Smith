@@ -7,18 +7,18 @@ import os
 from typing import Any, Dict
 
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .entity import AOSmithEntity
 
 _LOGGER = logging.getLogger(__name__)
-
 TRANSLATIONS_DIRNAME = "translations"
 
 
 def _translations_dir(hass: HomeAssistant) -> str:
+    """Return the path to translations JSON."""
     try:
         path = hass.config.path("custom_components", DOMAIN, TRANSLATIONS_DIRNAME)
         if os.path.isdir(path):
@@ -29,10 +29,14 @@ def _translations_dir(hass: HomeAssistant) -> str:
 
 
 def load_config(hass: HomeAssistant, lang_code: str = "zh-Hans") -> dict:
+    """Load sensor translation/config JSON."""
     translations_path = _translations_dir(hass)
     file_path = os.path.join(translations_path, f"{lang_code}.json")
     if not os.path.exists(file_path):
-        _LOGGER.debug("Translation file for %s not found at %s, falling back to zh-Hans.json", lang_code, file_path)
+        _LOGGER.debug(
+            "Translation file for %s not found at %s, falling back to zh-Hans.json",
+            lang_code, file_path
+        )
         file_path = os.path.join(translations_path, "zh-Hans.json")
     if not os.path.exists(file_path):
         _LOGGER.warning("No translation file found at %s.", file_path)
@@ -46,6 +50,7 @@ def load_config(hass: HomeAssistant, lang_code: str = "zh-Hans") -> dict:
 
 
 def _extract_output_data(device_data: dict) -> dict:
+    """Parse outputData from device status info."""
     if not device_data:
         return {}
     raw = device_data.get("statusInfo")
@@ -62,7 +67,12 @@ def _extract_output_data(device_data: dict) -> dict:
     return {}
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities) -> None:
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities
+) -> None:
+    """Set up sensors for Ai-Link A.O. Smith devices."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
     await coordinator.async_config_entry_first_refresh()
 
@@ -97,9 +107,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
     for device_id, device_data in coordinator.data.items():
         if str(device_data.get("deviceCategory", "")) != "19":
             continue
+        # Create mapped sensors
         for sensor_key in sensor_mapping.keys():
             entities.append(AOSmithSensor(coordinator, device_id, sensor_key, sensor_mapping))
 
+        # Create raw sensors for extra keys not in mapping
         output = _extract_output_data(device_data)
         if isinstance(output, dict):
             for key in output.keys():
@@ -111,7 +123,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
 
 
 class AOSmithSensor(AOSmithEntity, SensorEntity):
-    """Sensor entity mapped via JSON config with unit, icon, value_map."""
+    """Mapped sensor entity via JSON with unit, icon, value_map."""
 
     def __init__(self, coordinator, device_id: str, sensor_key: str, mapping: dict):
         super().__init__(coordinator, device_id)
@@ -143,6 +155,16 @@ class AOSmithSensor(AOSmithEntity, SensorEntity):
                 return float(val) if "." in val else int(val)
         return value
 
+    @property
+    def extra_state_attributes(self):
+        """Return all other outputData keys as extra attributes."""
+        output = _extract_output_data(self.device_data)
+        attrs = {}
+        for k, v in output.items():
+            if k != self._sensor_key:
+                attrs[k] = v
+        return attrs
+
 
 class AOSmithRawSensor(AOSmithEntity, SensorEntity):
     """Dynamic sensor for unknown keys in outputData."""
@@ -159,3 +181,7 @@ class AOSmithRawSensor(AOSmithEntity, SensorEntity):
     def native_value(self):
         output = _extract_output_data(self.device_data)
         return output.get(self._sensor_key)
+
+    @property
+    def extra_state_attributes(self):
+        return {k: v for k, v in _extract_output_data(self.device_data).items() if k != self._sensor_key}
