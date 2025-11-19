@@ -146,7 +146,13 @@ class AOSmithAPI:
                         _LOGGER.debug("Device status response for %s: %s", device_id, json.dumps(data, indent=2))
                         
                         if data.get("status") == 200:
-                            return data.get("info")
+                            info = data.get("info", {})
+                            # 记录设备状态信息中的关键字段
+                            _LOGGER.debug("Device status info for %s - productModel: %s, productName: %s", 
+                                        device_id, 
+                                        info.get("productModel"), 
+                                        info.get("productName"))
+                            return info
                         else:
                             _LOGGER.error("API error for device %s: %s", device_id, data.get("msg"))
                     except json.JSONDecodeError as e:

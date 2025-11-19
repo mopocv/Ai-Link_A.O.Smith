@@ -36,9 +36,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Fetch initial data
     await coordinator.async_config_entry_first_refresh()
     
+    # 记录详细的设备信息用于调试
+    for device_id, device_data in coordinator.data.items():
+        _LOGGER.info("=== Device %s Information ===", device_id)
+        _LOGGER.info("Available keys: %s", list(device_data.keys()))
+        _LOGGER.info("productModel: %s", device_data.get("productModel"))
+        _LOGGER.info("productName: %s", device_data.get("productName"))
+        _LOGGER.info("deviceCategory: %s", device_data.get("deviceCategory"))
+        
+        # 检查是否有 statusInfo
+        if "statusInfo" in device_data:
+            _LOGGER.info("Device has statusInfo")
+        else:
+            _LOGGER.warning("Device missing statusInfo")
+    
     # Set up platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     
+    _LOGGER.info("A.O. Smith integration setup completed successfully")
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -75,10 +90,22 @@ class AOSmithDataUpdateCoordinator(DataUpdateCoordinator):
             for device in devices:
                 device_id = device.get("deviceId")
                 if device_id:
+                    # 记录原始设备数据用于调试
+                    _LOGGER.debug("Raw device data for %s - productModel: %s, productName: %s", 
+                                 device_id, 
+                                 device.get("productModel"), 
+                                 device.get("productName"))
+                    
                     # Get device status
                     status = await self.api.async_get_device_status(device_id)
                     if status:
+                        # 记录状态数据中的信息
+                        if "productModel" in status:
+                            _LOGGER.debug("Status data contains productModel: %s", status.get("productModel"))
+                        
                         device.update(status)
+                        _LOGGER.debug("Merged device data for %s", device_id)
+                    
                     data[device_id] = device
             
             _LOGGER.debug("Updated data for %d devices", len(data))
