@@ -49,6 +49,8 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
     def __init__(self, coordinator, device_id):
         """Initialize the water heater."""
         super().__init__(coordinator, device_id)
+        # Use translation key so name is localized; fallback to productName
+        self._attr_translation_key = "default_name"
         self._attr_name = self.device_data.get("productName", "A.O. Smith Water Heater")
         # Set integration/device icon for frontend (MDI)
         self._attr_icon = "mdi:water-boiler"
