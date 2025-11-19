@@ -29,6 +29,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     # Create coordinator
     coordinator = AOSmithDataUpdateCoordinator(hass, api)
+    # Attach the config entry to coordinator so entities can reference it
+    coordinator.config_entry = entry
     
     # Store coordinator
     hass.data[DOMAIN][entry.entry_id] = coordinator

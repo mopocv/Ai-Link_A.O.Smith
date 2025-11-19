@@ -115,5 +115,5 @@ class AOSmithEntity(CoordinatorEntity):
     @property
     def icon(self) -> str | None:
         """Return the icon to use in the frontend."""
-        # 基类不设置图标，由具体实体类设置
-        return None
+        # 如果子类设置了 `_attr_icon`，优先返回它，这样可以在前端显示 MDI 图标
+        return getattr(self, "_attr_icon", None)

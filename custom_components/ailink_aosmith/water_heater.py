@@ -50,6 +50,8 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
         """Initialize the water heater."""
         super().__init__(coordinator, device_id)
         self._attr_name = self.device_data.get("productName", "A.O. Smith Water Heater")
+        # Set integration/device icon for frontend (MDI)
+        self._attr_icon = "mdi:water-boiler"
         self._attr_unique_id = f"{device_id}_water_heater"
         
         # Set supported features for HomeKit compatibility

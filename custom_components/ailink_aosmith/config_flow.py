@@ -1,9 +1,12 @@
 """Config flow for Ai-Link A.O. Smith."""
 import voluptuous as vol
+import logging
 from homeassistant import config_entries
 from homeassistant.core import callback
 
 from .const import DOMAIN, CONF_USER_ID, CONF_FAMILY_ID, CONF_ACCESS_TOKEN, CONF_DEVICE_ID, CONF_MOBILE, CONF_COOKIE
+
+_LOGGER = logging.getLogger(__name__)
 
 class AOSmithConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Ai-Link A.O. Smith."""

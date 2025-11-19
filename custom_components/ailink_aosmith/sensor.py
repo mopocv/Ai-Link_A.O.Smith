@@ -18,10 +18,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     await coordinator.async_config_entry_first_refresh()
     
     entities = []
-    for device_id in coordinator.data:
-        device_data = coordinator.data[device_id]
-        # Only create sensors for water heater devices
-        if device_data.get("deviceCategory") == "19":  # Water heater device category
+    for device_id, device_data in coordinator.data.items():
+        # 兼容 deviceCategory 为字符串或数字
+        category = device_data.get("deviceCategory")
+        if str(category) == "19":  # Water heater device category
             for sensor_type in SENSOR_TYPES:
                 entities.append(AOSmithSensor(coordinator, device_id, sensor_type))
     
@@ -33,12 +33,15 @@ class AOSmithSensor(AOSmithEntity, SensorEntity):
     
     def __init__(self, coordinator, device_id, sensor_type):
         """Initialize the sensor."""
-        self.coordinator = coordinator
+        super().__init__(coordinator, device_id)
+        self._sensor_type = sensor_type
         self._device_id = device_id
         self._sensor_type = sensor_type
         
         name, unit, icon, device_class = SENSOR_TYPES[sensor_type]
-        self._attr_name = f"{self.device_data.get('productName', 'A.O. Smith')} {name}"
+        # 如果 productName 为 None，使用默认名
+        product_name = self.device_data.get('productName') or 'A.O. Smith'
+        self._attr_name = f"{product_name} {name}"
         self._attr_unique_id = f"ailink_aosmith_{sensor_type}_{device_id}"
         self._attr_native_unit_of_measurement = unit
         self._attr_icon = icon

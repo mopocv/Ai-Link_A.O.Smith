@@ -1,0 +1,44 @@
+{
+  "title": "Ai-Link 史密斯",
+  "config": {
+    "step": {
+      "user": {
+        "title": "配置 Ai-Link 史密斯",
+        "description": "提供 Ai-Link 凭证 (access token, user id, family id, cookie)。可选：手机号。"
+      },
+      "select_device": {
+        "title": "选择设备",
+        "description": "选择要添加到 Home Assistant 的设备。"
+      }
+    },
+    "data": {
+      "access_token": "访问令牌 (access_token)",
+      "user_id": "用户 ID (user_id)",
+      "family_id": "家庭 ID (family_id)",
+      "cookie": "Cookie",
+      "mobile": "手机号",
+      "device_id": "设备"
+    },
+    "errors": {
+      "no_devices": "未找到任何设备，请检查凭证。"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "water_temp": "当前温度",
+      "in_water_temp": "进水温度",
+      "out_water_temp": "出水温度",
+      "water_flow": "流量",
+      "fire_times": "点火次数",
+      "total_water_num": "总用水量",
+      "total_gas_num": "总用气量",
+      "fan_speed": "风扇转速",
+      "co_concentration": "CO 浓度",
+      "device_status": "设备状态",
+      "power_status": "供电状态"
+    },
+    "water_heater": {
+      "default_name": "Ai-Link 史密斯 热水器"
+    }
+  }
+}

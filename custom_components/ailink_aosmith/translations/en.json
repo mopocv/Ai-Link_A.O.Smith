@@ -1,0 +1,44 @@
+{
+  "title": "Ai-Link A.O. Smith",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure Ai-Link A.O. Smith",
+        "description": "Provide your Ai-Link credentials (access token, user id, family id, cookie). Optional: mobile."
+      },
+      "select_device": {
+        "title": "Select device",
+        "description": "Choose which device to add to Home Assistant."
+      }
+    },
+    "data": {
+      "access_token": "Access Token",
+      "user_id": "User ID",
+      "family_id": "Family ID",
+      "cookie": "Cookie",
+      "mobile": "Mobile Number",
+      "device_id": "Device"
+    },
+    "errors": {
+      "no_devices": "No devices found with these credentials."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "water_temp": "Current Temperature",
+      "in_water_temp": "Inlet Temperature",
+      "out_water_temp": "Outlet Temperature",
+      "water_flow": "Water Flow",
+      "fire_times": "Ignition Count",
+      "total_water_num": "Total Water Used",
+      "total_gas_num": "Total Gas Used",
+      "fan_speed": "Fan Speed",
+      "co_concentration": "CO Concentration",
+      "device_status": "Device Status",
+      "power_status": "Power Status"
+    },
+    "water_heater": {
+      "default_name": "Ai-Link A.O. Smith Water Heater"
+    }
+  }
+}
