@@ -1,7 +1,6 @@
 {
   "domain": "ailink_aosmith",
   "name": "Ai-Link A.O. Smith",
-  "icon": "icon.png",
   "codeowners": [
     "@mopocv"
   ],
