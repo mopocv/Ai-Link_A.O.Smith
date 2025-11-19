@@ -19,7 +19,7 @@ CONF_COOKIE = "cookie"
 DEFAULT_NAME = "Ai-Link A.O. Smith Water Heater"
 
 # Platforms provided by this integration
-PLATFORMS = ["water_heater", "sensor", "switch"]
+PLATFORMS = ["water_heater", "sensor"]
 
 # Coordinator update interval (seconds)
 UPDATE_INTERVAL = 60
