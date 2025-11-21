@@ -10,7 +10,7 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
+from .const import DOMAIN, DEVICE_CATEGORY_WATER_HEATER
 from .entity import AOSmithEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -105,7 +105,7 @@ async def async_setup_entry(
 
     entities = []
     for device_id, device_data in coordinator.data.items():
-        if str(device_data.get("deviceCategory", "")) != "19":
+        if str(device_data.get("deviceCategory", "")) != DEVICE_CATEGORY_WATER_HEATER:
             continue
         # Create mapped sensors
         for sensor_key in sensor_mapping.keys():

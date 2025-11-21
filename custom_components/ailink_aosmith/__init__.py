@@ -5,7 +5,8 @@ from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN, PLATFORMS, UPDATE_INTERVAL
 from .api import AOSmithAPI
@@ -16,47 +17,66 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Ai-Link A.O. Smith from a config entry."""
     hass.data.setdefault(DOMAIN, {})
     
-    # Initialize API
-    api = AOSmithAPI(
-        access_token=entry.data["access_token"],
-        user_id=entry.data["user_id"],
-        family_id=entry.data["family_id"],
-        cookie=entry.data.get("cookie"),
-        mobile=entry.data.get("mobile")
-    )
+    _LOGGER.info("Setting up A.O. Smith integration with user_id: %s", entry.data["user_id"])
     
-    await api.async_authenticate()
-    
-    # Create coordinator
-    coordinator = AOSmithDataUpdateCoordinator(hass, api)
-    # Attach the config entry to coordinator so entities can reference it
-    coordinator.config_entry = entry
-    
-    # Store coordinator
-    hass.data[DOMAIN][entry.entry_id] = coordinator
-    
-    # Fetch initial data
-    await coordinator.async_config_entry_first_refresh()
-    
-    # 记录详细的设备信息用于调试
-    for device_id, device_data in coordinator.data.items():
-        _LOGGER.info("=== Device %s Information ===", device_id)
-        _LOGGER.info("Available keys: %s", list(device_data.keys()))
-        _LOGGER.info("productModel: %s", device_data.get("productModel"))
-        _LOGGER.info("productName: %s", device_data.get("productName"))
-        _LOGGER.info("deviceCategory: %s", device_data.get("deviceCategory"))
+    try:
+        # Initialize API
+        api = AOSmithAPI(
+            access_token=entry.data["access_token"],
+            user_id=entry.data["user_id"],
+            family_id=entry.data["family_id"],
+            cookie=entry.data.get("cookie"),
+            mobile=entry.data.get("mobile")
+        )
         
-        # 检查是否有 statusInfo
-        if "statusInfo" in device_data:
-            _LOGGER.info("Device has statusInfo")
-        else:
-            _LOGGER.warning("Device missing statusInfo")
-    
-    # Set up platforms
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    
-    _LOGGER.info("A.O. Smith integration setup completed successfully")
-    return True
+        await api.async_authenticate()
+        
+        # Create coordinator
+        coordinator = AOSmithDataUpdateCoordinator(hass, api)
+        # Attach the config entry to coordinator so entities can reference it
+        coordinator.config_entry = entry
+        
+        # Fetch initial data
+        await coordinator.async_config_entry_first_refresh()
+        
+        # Store coordinator
+        hass.data[DOMAIN][entry.entry_id] = coordinator
+        
+        # 记录详细的设备信息用于调试
+        for device_id, device_data in coordinator.data.items():
+            _LOGGER.info("=== Device %s Information ===", device_id)
+            _LOGGER.info("Device Name: %s", device_data.get("productName"))
+            _LOGGER.info("Device Model: %s", device_data.get("productModel"))
+            _LOGGER.info("Device Category: %s", device_data.get("deviceCategory"))
+            _LOGGER.info("Available keys: %s", list(device_data.keys()))
+            
+            # 检查状态信息
+            if "statusInfo" in device_data:
+                _LOGGER.debug("Device has statusInfo")
+                try:
+                    status_data = json.loads(device_data["statusInfo"])
+                    _LOGGER.debug("Status info keys: %s", list(status_data.keys()))
+                    if "events" in status_data:
+                        for event in status_data["events"]:
+                            if event.get("identifier") == "post":
+                                output_data = event.get("outputData", {})
+                                _LOGGER.debug("Output data keys: %s", list(output_data.keys()))
+                                break
+                except Exception as e:
+                    _LOGGER.debug("Error parsing status info: %s", e)
+            else:
+                _LOGGER.warning("Device missing statusInfo")
+        
+        # Set up platforms
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        
+        _LOGGER.info("A.O. Smith integration setup completed successfully with %d devices", 
+                    len(coordinator.data))
+        return True
+        
+    except Exception as err:
+        _LOGGER.error("Error setting up A.O. Smith integration: %s", err)
+        raise ConfigEntryNotReady(f"Failed to setup integration: {err}")
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
@@ -65,6 +85,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coordinator = hass.data[DOMAIN][entry.entry_id]
         await coordinator.api.close()
         hass.data[DOMAIN].pop(entry.entry_id)
+        _LOGGER.info("A.O. Smith integration unloaded successfully")
     
     return unload_ok
 
@@ -86,32 +107,50 @@ class AOSmithDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Fetch data from API."""
         try:
+            _LOGGER.debug("Updating A.O. Smith data")
+            
+            if not self.api.is_authenticated:
+                _LOGGER.warning("API not authenticated, re-authenticating")
+                await self.api.async_authenticate()
+            
             devices = await self.api.async_get_devices()
             
             data = {}
             for device in devices:
                 device_id = device.get("deviceId")
                 if device_id:
-                    # 记录原始设备数据用于调试
-                    _LOGGER.debug("Raw device data for %s - productModel: %s, productName: %s", 
-                                 device_id, 
-                                 device.get("productModel"), 
-                                 device.get("productName"))
+                    _LOGGER.debug("Processing device %s: %s", device_id, device.get("productName"))
                     
-                    # Get device status
-                    status = await self.api.async_get_device_status(device_id)
-                    if status:
-                        # 记录状态数据中的信息
-                        if "productModel" in status:
-                            _LOGGER.debug("Status data contains productModel: %s", status.get("productModel"))
-                        
-                        device.update(status)
-                        _LOGGER.debug("Merged device data for %s", device_id)
-                    
-                    data[device_id] = device
+                    # Get device status with timeout
+                    try:
+                        status = await asyncio.wait_for(
+                            self.api.async_get_device_status(device_id),
+                            timeout=10.0
+                        )
+                        if status:
+                            # Merge device info with status
+                            merged_data = {**device, **status}
+                            data[device_id] = merged_data
+                            _LOGGER.debug("Successfully updated status for device %s", device_id)
+                        else:
+                            # Use basic device info if status fetch failed
+                            data[device_id] = device
+                            _LOGGER.warning("Failed to get status for device %s, using basic info", device_id)
+                    except asyncio.TimeoutError:
+                        data[device_id] = device
+                        _LOGGER.warning("Timeout getting status for device %s", device_id)
+                    except Exception as status_err:
+                        data[device_id] = device
+                        _LOGGER.warning("Error getting status for device %s: %s", device_id, status_err)
             
             _LOGGER.debug("Updated data for %d devices", len(data))
             return data
+            
+        except asyncio.TimeoutError:
+            error_msg = "Timeout updating A.O. Smith data"
+            _LOGGER.error(error_msg)
+            raise UpdateFailed(error_msg)
         except Exception as err:
-            _LOGGER.error("Error updating A.O. Smith data: %s", err)
-            raise
+            error_msg = f"Error updating A.O. Smith data: {err}"
+            _LOGGER.error(error_msg)
+            raise UpdateFailed(error_msg)

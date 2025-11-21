@@ -5,10 +5,6 @@
       "user": {
         "title": "配置 Ai-Link 史密斯",
         "description": "提供 Ai-Link 凭证 (access token, user id, family id, cookie)。可选：手机号。"
-      },
-      "select_device": {
-        "title": "选择设备",
-        "description": "选择要添加到 Home Assistant 的设备。"
       }
     },
     "data": {
@@ -16,11 +12,11 @@
       "user_id": "用户 ID (user_id)",
       "family_id": "家庭 ID (family_id)",
       "cookie": "Cookie",
-      "mobile": "手机号",
-      "device_id": "设备"
+      "mobile": "手机号"
     },
     "errors": {
-      "no_devices": "未找到任何设备，请检查凭证。"
+      "no_devices": "未找到任何设备，请检查凭证。",
+      "auth_error": "认证失败，请检查凭证是否正确。"
     }
   },
   "entity": {
@@ -59,11 +55,34 @@
       "secAllFirCirAntifreeNum": {"name": "点火循环防冻次数", "group": "combustion", "unit": "次", "icon": "mdi:counter"},
       "secWindPressureZeroValue": {"name": "风压零点值", "group": "fan", "unit": "", "icon": "mdi:gauge"},
       "secAntiWindPressNum": {"name": "防回风次数", "group": "fan", "unit": "次", "icon": "mdi:counter"},
-      "secVersionCode": {"name": "固件版本代码", "group": "fault", "unit": "", "icon": "mdi:information"}
+      "secVersionCode": {"name": "固件版本代码", "group": "fault", "unit": "", "icon": "mdi:information"},
+      "cruiseStatus": {"name": "巡航状态", "group": "mode", "unit": "", "icon": "mdi:water-sync", "value_map": {"1": "开启", "0": "关闭"}},
+      "pressurizeStatus": {"name": "增压状态", "group": "mode", "unit": "", "icon": "mdi:water-pump", "value_map": {"1": "开启", "0": "关闭"}},
+      "halfPipeStatus": {"name": "节能半管状态", "group": "mode", "unit": "", "icon": "mdi:pipe", "value_map": {"1": "开启", "0": "关闭"}}
     },
     "water_heater": {
       "default_name": "史密斯 燃气热水器",
-      "operation_mode": {"off": "关闭", "heat": "加热"}
+      "operation_mode": {
+        "off": "关闭", 
+        "heat": "加热",
+        "pressurize": "增压",
+        "cruise": "巡航", 
+        "half_pipe": "节能半管"
+      }
+    },
+    "switch": {
+      "pressurize": {
+        "name": "增压模式",
+        "icon": "mdi:water-pump"
+      },
+      "cruise": {
+        "name": "巡航模式", 
+        "icon": "mdi:water-sync"
+      },
+      "half_pipe": {
+        "name": "节能半管模式",
+        "icon": "mdi:pipe"
+      }
     }
   }
 }

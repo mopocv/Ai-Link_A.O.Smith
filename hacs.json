@@ -3,7 +3,8 @@
   "render_readme": true,
   "domains": [
     "water_heater",
-    "sensor"
+    "sensor",
+    "switch"
   ],
   "country": "CN",
   "homeassistant": "2024.4.4",

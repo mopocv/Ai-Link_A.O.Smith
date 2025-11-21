@@ -5,10 +5,6 @@
       "user": {
         "title": "Configure Ai-Link A.O. Smith",
         "description": "Provide your Ai-Link credentials (access token, user id, family id, cookie). Optional: mobile."
-      },
-      "select_device": {
-        "title": "Select device",
-        "description": "Choose which device to add to Home Assistant."
       }
     },
     "data": {
@@ -16,11 +12,11 @@
       "user_id": "User ID",
       "family_id": "Family ID",
       "cookie": "Cookie",
-      "mobile": "Mobile Number",
-      "device_id": "Device"
+      "mobile": "Mobile Number"
     },
     "errors": {
-      "no_devices": "No devices found with these credentials."
+      "no_devices": "No devices found with these credentials.",
+      "auth_error": "Authentication failed, please check your credentials."
     }
   },
   "entity": {
@@ -59,11 +55,34 @@
       "secAllFirCirAntifreeNum": {"name": "Fire Circulation Anti-Freeze Count", "group": "combustion", "unit": "times", "icon": "mdi:counter"},
       "secWindPressureZeroValue": {"name": "Wind Pressure Zero Value", "group": "fan", "unit": "", "icon": "mdi:gauge"},
       "secAntiWindPressNum": {"name": "Anti Wind Press Count", "group": "fan", "unit": "times", "icon": "mdi:counter"},
-      "secVersionCode": {"name": "Firmware Version Code", "group": "fault", "unit": "", "icon": "mdi:information"}
+      "secVersionCode": {"name": "Firmware Version Code", "group": "fault", "unit": "", "icon": "mdi:information"},
+      "cruiseStatus": {"name": "Cruise Status", "group": "mode", "unit": "", "icon": "mdi:water-sync", "value_map": {"1": "On", "0": "Off"}},
+      "pressurizeStatus": {"name": "Pressurize Status", "group": "mode", "unit": "", "icon": "mdi:water-pump", "value_map": {"1": "On", "0": "Off"}},
+      "halfPipeStatus": {"name": "Half Pipe Status", "group": "mode", "unit": "", "icon": "mdi:pipe", "value_map": {"1": "On", "0": "Off"}}
     },
     "water_heater": {
       "default_name": "Ai-Link A.O. Smith Water Heater",
-      "operation_mode": {"off": "Off", "heat": "Heating"}
+      "operation_mode": {
+        "off": "Off", 
+        "heat": "Heating",
+        "pressurize": "Pressurize",
+        "cruise": "Cruise", 
+        "half_pipe": "Half Pipe"
+      }
+    },
+    "switch": {
+      "pressurize": {
+        "name": "Pressurize Mode",
+        "icon": "mdi:water-pump"
+      },
+      "cruise": {
+        "name": "Cruise Mode", 
+        "icon": "mdi:water-sync"
+      },
+      "half_pipe": {
+        "name": "Half Pipe Mode",
+        "icon": "mdi:pipe"
+      }
     }
   }
 }
