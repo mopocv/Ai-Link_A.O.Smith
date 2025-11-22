@@ -1,5 +1,6 @@
 """The Ai-Link A.O. Smith integration."""
 import asyncio
+import json
 import logging
 from datetime import timedelta
 
@@ -12,6 +13,7 @@ from .const import DOMAIN, PLATFORMS, UPDATE_INTERVAL
 from .api import AOSmithAPI
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Ai-Link A.O. Smith from a config entry."""
@@ -68,6 +70,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 _LOGGER.warning("Device missing statusInfo")
         
         # Set up platforms
+        _LOGGER.info("Setting up platforms: %s", PLATFORMS)
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
         
         _LOGGER.info("A.O. Smith integration setup completed successfully with %d devices", 
@@ -75,8 +78,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return True
         
     except Exception as err:
-        _LOGGER.error("Error setting up A.O. Smith integration: %s", err)
-        raise ConfigEntryNotReady(f"Failed to setup integration: {err}")
+        _LOGGER.error("Error setting up A.O. Smith integration: %s", err, exc_info=True)
+        raise ConfigEntryNotReady(f"Failed to setup integration: {err}") from err
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""

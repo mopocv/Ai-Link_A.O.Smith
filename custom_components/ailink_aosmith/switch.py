@@ -45,10 +45,14 @@ class AOSmithBaseSwitch(AOSmithEntity, SwitchEntity):
         """Initialize the switch."""
         super().__init__(coordinator, device_id)
         self._switch_key = switch_key
-        self._device_id = device_id  # 确保存储 device_id
         
         # Get translation configuration
-        translation = getattr(coordinator, 'translation', {})
+        translation = {}
+        try:
+            translation = getattr(coordinator, 'translation', {})
+        except AttributeError:
+            _LOGGER.debug("No translation found in coordinator")
+        
         switch_config = translation.get('entity', {}).get('switch', {}).get(switch_key, {})
         
         device_name = self.device_data.get('productName', 'Water Heater')
@@ -58,11 +62,6 @@ class AOSmithBaseSwitch(AOSmithEntity, SwitchEntity):
         self._attr_unique_id = f"{device_id}_{switch_key}"
         self._attr_icon = switch_config.get('icon')
         self._is_on = False
-
-    @property
-    def device_id(self):
-        """Return the device ID."""
-        return self._device_id
 
     def _update_state_from_data(self):
         """Update switch state from device data."""
@@ -79,7 +78,7 @@ class AOSmithBaseSwitch(AOSmithEntity, SwitchEntity):
                     self._is_on = self._get_state_from_output(output_data)
                     break
         except Exception as e:
-            _LOGGER.debug("Error updating %s state for %s: %s", self._switch_key, self.device_id, e)
+            _LOGGER.debug("Error updating %s state for %s: %s", self._switch_key, self._device_id, e)
 
     def _get_state_from_output(self, output_data: dict) -> bool:
         """Extract switch state from output data - to be implemented by subclasses."""
@@ -93,25 +92,25 @@ class AOSmithBaseSwitch(AOSmithEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
-        _LOGGER.info("Turning on %s for %s", self._switch_key, self.device_id)
+        _LOGGER.info("Turning on %s for %s", self._switch_key, self._device_id)
         try:
             await self._send_turn_on_command()
             self._is_on = True
             self.async_write_ha_state()
-            _LOGGER.info("%s turned on for %s", self._switch_key, self.device_id)
+            _LOGGER.info("%s turned on for %s", self._switch_key, self._device_id)
         except Exception as e:
-            _LOGGER.error("Failed to turn on %s for %s: %s", self._switch_key, self.device_id, e)
+            _LOGGER.error("Failed to turn on %s for %s: %s", self._switch_key, self._device_id, e)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the switch."""
-        _LOGGER.info("Turning off %s for %s", self._switch_key, self.device_id)
+        _LOGGER.info("Turning off %s for %s", self._switch_key, self._device_id)
         try:
             await self._send_turn_off_command()
             self._is_on = False
             self.async_write_ha_state()
-            _LOGGER.info("%s turned off for %s", self._switch_key, self.device_id)
+            _LOGGER.info("%s turned off for %s", self._switch_key, self._device_id)
         except Exception as e:
-            _LOGGER.error("Failed to turn off %s for %s: %s", self._switch_key, self.device_id, e)
+            _LOGGER.error("Failed to turn off %s for %s: %s", self._switch_key, self._device_id, e)
 
     async def _send_turn_on_command(self):
         """Send command to turn on the switch - to be implemented by subclasses."""
@@ -138,7 +137,7 @@ class AOSmithPressurizeSwitch(AOSmithBaseSwitch):
         """Turn on pressurize mode."""
         # 根据实际API命令调整
         await self.coordinator.api.async_send_command(
-            self.device_id, 
+            self._device_id, 
             "PressurizeMode", 
             {"pressurizeStatus": "1"}
         )
@@ -147,7 +146,7 @@ class AOSmithPressurizeSwitch(AOSmithBaseSwitch):
         """Turn off pressurize mode."""
         # 根据实际API命令调整
         await self.coordinator.api.async_send_command(
-            self.device_id, 
+            self._device_id, 
             "PressurizeMode", 
             {"pressurizeStatus": "0"}
         )
@@ -167,7 +166,7 @@ class AOSmithCruiseSwitch(AOSmithBaseSwitch):
     async def _send_turn_on_command(self):
         """Turn on cruise mode."""
         await self.coordinator.api.async_send_command(
-            self.device_id, 
+            self._device_id, 
             "WaterCruiseOnOff", 
             {"cruiseStatus": "1"}
         )
@@ -175,7 +174,7 @@ class AOSmithCruiseSwitch(AOSmithBaseSwitch):
     async def _send_turn_off_command(self):
         """Turn off cruise mode."""
         await self.coordinator.api.async_send_command(
-            self.device_id, 
+            self._device_id, 
             "WaterCruiseOnOff", 
             {"cruiseStatus": "0"}
         )
@@ -187,4 +186,24 @@ class AOSmithHalfPipeSwitch(AOSmithBaseSwitch):
     def __init__(self, coordinator, device_id: str):
         super().__init__(coordinator, device_id, "half_pipe")
 
-    def _get_state_from_output(self, output_data:
+    def _get_state_from_output(self, output_data: dict) -> bool:
+        """Get half pipe state from output data."""
+        # 根据实际API字段调整
+        half_pipe_status = output_data.get("halfPipeStatus")
+        return half_pipe_status == "1"
+
+    async def _send_turn_on_command(self):
+        """Turn on half pipe mode."""
+        await self.coordinator.api.async_send_command(
+            self._device_id, 
+            "setHalfPipeCircle", 
+            {"setHalfPipeCircle": "1"}
+        )
+
+    async def _send_turn_off_command(self):
+        """Turn off half pipe mode."""
+        await self.coordinator.api.async_send_command(
+            self._device_id, 
+            "setHalfPipeCircle", 
+            {"setHalfPipeCircle": "0"}
+        )

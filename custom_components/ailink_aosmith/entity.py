@@ -16,6 +16,11 @@ class AOSmithEntity(CoordinatorEntity):
         self._device_id = device_id
 
     @property
+    def device_id(self):
+        """Return the device ID."""
+        return self._device_id
+
+    @property
     def device_data(self):
         """Return the device data from coordinator."""
         return self.coordinator.data.get(self._device_id, {})
