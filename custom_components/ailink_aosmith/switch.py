@@ -45,6 +45,7 @@ class AOSmithBaseSwitch(AOSmithEntity, SwitchEntity):
         """Initialize the switch."""
         super().__init__(coordinator, device_id)
         self._switch_key = switch_key
+        self._device_id = device_id  # 确保存储 device_id
         
         # Get translation configuration
         translation = getattr(coordinator, 'translation', {})
@@ -57,6 +58,11 @@ class AOSmithBaseSwitch(AOSmithEntity, SwitchEntity):
         self._attr_unique_id = f"{device_id}_{switch_key}"
         self._attr_icon = switch_config.get('icon')
         self._is_on = False
+
+    @property
+    def device_id(self):
+        """Return the device ID."""
+        return self._device_id
 
     def _update_state_from_data(self):
         """Update switch state from device data."""
@@ -181,24 +187,4 @@ class AOSmithHalfPipeSwitch(AOSmithBaseSwitch):
     def __init__(self, coordinator, device_id: str):
         super().__init__(coordinator, device_id, "half_pipe")
 
-    def _get_state_from_output(self, output_data: dict) -> bool:
-        """Get half pipe state from output data."""
-        # 根据实际API字段调整
-        half_pipe_status = output_data.get("halfPipeStatus")
-        return half_pipe_status == "1"
-
-    async def _send_turn_on_command(self):
-        """Turn on half pipe mode."""
-        await self.coordinator.api.async_send_command(
-            self.device_id, 
-            "setHalfPipeCircle", 
-            {"setHalfPipeCircle": "1"}
-        )
-
-    async def _send_turn_off_command(self):
-        """Turn off half pipe mode."""
-        await self.coordinator.api.async_send_command(
-            self.device_id, 
-            "setHalfPipeCircle", 
-            {"setHalfPipeCircle": "0"}
-        )
+    def _get_state_from_output(self, output_data:
