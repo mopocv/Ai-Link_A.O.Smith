@@ -46,14 +46,16 @@ class AOSmithBaseSwitch(AOSmithEntity, SwitchEntity):
         super().__init__(coordinator, device_id)
         self._switch_key = switch_key
         
-        # Get translation configuration
-        translation = {}
-        try:
-            translation = getattr(coordinator, 'translation', {})
-        except AttributeError:
-            _LOGGER.debug("No translation found in coordinator")
+        # 从翻译配置获取名称和图标
+        translation = getattr(coordinator, 'translation', {})
+        _LOGGER.debug("Available translation keys: %s", list(translation.keys()) if translation else "No translation")
         
-        switch_config = translation.get('entity', {}).get('switch', {}).get(switch_key, {})
+        switch_config = {}
+        if translation:
+            entity_config = translation.get('entity', {})
+            _LOGGER.debug("Entity config keys: %s", list(entity_config.keys()))
+            switch_config = entity_config.get('switch', {}).get(switch_key, {})
+            _LOGGER.debug("Switch config for %s: %s", switch_key, switch_config)
         
         device_name = self.device_data.get('productName', 'Water Heater')
         switch_name = switch_config.get('name', switch_key)

@@ -2,6 +2,7 @@
 import asyncio
 import json
 import logging
+import os
 from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
@@ -13,6 +14,37 @@ from .const import DOMAIN, PLATFORMS, UPDATE_INTERVAL
 from .api import AOSmithAPI
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def load_translation(hass: HomeAssistant) -> dict:
+    """Load translation configuration."""
+    try:
+        # 获取自定义组件目录
+        custom_components_dir = os.path.dirname(os.path.dirname(__file__))
+        integration_dir = os.path.join(custom_components_dir, DOMAIN)
+        translations_dir = os.path.join(integration_dir, 'translations')
+        
+        # 确定语言
+        language = hass.config.language
+        if not language:
+            language = "zh-Hans"
+        
+        # 尝试加载对应语言的翻译文件
+        translation_file = os.path.join(translations_dir, f"{language}.json")
+        if not os.path.exists(translation_file):
+            # 回退到中文
+            translation_file = os.path.join(translations_dir, "zh-Hans.json")
+        
+        if os.path.exists(translation_file):
+            with open(translation_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        else:
+            _LOGGER.warning("Translation file not found: %s", translation_file)
+            
+    except Exception as e:
+        _LOGGER.error("Failed to load translation: %s", e)
+    
+    return {}
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -37,6 +69,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coordinator = AOSmithDataUpdateCoordinator(hass, api)
         # Attach the config entry to coordinator so entities can reference it
         coordinator.config_entry = entry
+        
+        # 加载翻译配置
+        coordinator.translation = load_translation(hass)
+        _LOGGER.info("Loaded translation for language: %s", hass.config.language)
         
         # Fetch initial data
         await coordinator.async_config_entry_first_refresh()
@@ -99,6 +135,7 @@ class AOSmithDataUpdateCoordinator(DataUpdateCoordinator):
         """Initialize global data updater."""
         self.api = api
         self.data = {}
+        self.translation = {}  # 初始化翻译属性
         
         super().__init__(
             hass,
