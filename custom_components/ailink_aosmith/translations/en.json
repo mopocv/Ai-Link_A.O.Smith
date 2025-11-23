@@ -83,6 +83,16 @@
         "name": "Half Pipe Mode",
         "icon": "mdi:pipe"
       }
+    },
+    "valve": {
+      "cruise": {
+        "name": "Zero Cold Water Cruise",
+        "icon": "mdi:water-sync"
+      },
+      "half_pipe": {
+        "name": "Energy Saving Half Pipe",
+        "icon": "mdi:pipe"
+      }
     }
   }
 }

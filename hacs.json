@@ -4,7 +4,7 @@
   "domains": [
     "water_heater",
     "sensor",
-    "switch"
+    "valve"
   ],
   "country": "CN",
   "homeassistant": "2024.4.4",
