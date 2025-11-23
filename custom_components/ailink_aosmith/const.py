@@ -1,7 +1,12 @@
 """Constants for Ai-Link A.O. Smith integration."""
 
 from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import UnitOfTemperature, UnitOfVolume
+from homeassistant.const import (
+    UnitOfTemperature, 
+    UnitOfVolume, 
+    STATE_OFF, 
+    STATE_HEAT
+)
 
 # Integration domain/brand
 DOMAIN = "ailink_aosmith"
@@ -27,11 +32,17 @@ UPDATE_INTERVAL = 60
 # Device category that identifies water heaters (string or numeric in APIs)
 DEVICE_CATEGORY_WATER_HEATER = "19"
 
-# Water heater temperature limits (product range may vary — these are HA limits)
+# Water heater temperature limits
 WATER_HEATER_MIN_TEMP = 35.0
 WATER_HEATER_MAX_TEMP = 70.0
 WATER_HEATER_DEFAULT_TEMP = 38.0
 WATER_HEATER_TEMP_PRECISION = 1.0
+
+# Operation Modes for HA/HomeKit
+# 这是一个关键修改：只保留标准的 Off 和 Heat
+OPERATION_MODE_OFF = STATE_OFF
+OPERATION_MODE_HEAT = STATE_HEAT
+OPERATION_LIST = [OPERATION_MODE_OFF, OPERATION_MODE_HEAT]
 
 # HTTP / API defaults
 API_BASE_URL = "https://ailink-api.hotwater.com.cn"
