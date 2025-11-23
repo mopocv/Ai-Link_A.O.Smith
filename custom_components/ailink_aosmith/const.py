@@ -19,7 +19,7 @@ CONF_COOKIE = "cookie"
 DEFAULT_NAME = "Ai-Link A.O. Smith Water Heater"
 
 # Platforms provided by this integration
-PLATFORMS = ["water_heater", "sensor", "valve"]
+PLATFORMS = ["water_heater", "sensor", "switch"]  # 添加 switch 平台
 
 # Coordinator update interval (seconds)
 UPDATE_INTERVAL = 60
@@ -40,10 +40,6 @@ API_BASE_URL = "https://ailink-api.hotwater.com.cn"
 SWITCH_TYPE_PRESSURIZE = "pressurize"
 SWITCH_TYPE_CRUISE = "cruise"
 SWITCH_TYPE_HALF_PIPE = "half_pipe"
-
-# Valve types
-VALVE_TYPE_CRUISE = "cruise"
-VALVE_TYPE_HALF_PIPE = "half_pipe"
 
 # Misc
 LOG_NAMESPACE = "custom_components.ailink_aosmith"

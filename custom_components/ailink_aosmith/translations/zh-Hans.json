@@ -83,16 +83,6 @@
         "name": "节能半管模式",
         "icon": "mdi:pipe"
       }
-    },
-    "valve": {
-      "cruise": {
-        "name": "零冷水巡航",
-        "icon": "mdi:water-sync"
-      },
-      "half_pipe": {
-        "name": "节能半管",
-        "icon": "mdi:pipe"
-      }
     }
   }
 }

@@ -1,4 +1,4 @@
-"""Support for A.O. Smith water heaters with HomeKit valve service support."""
+"""Support for A.O. Smith water heaters with independent state controls."""
 from __future__ import annotations
 
 import json
@@ -34,11 +34,11 @@ async def async_setup_entry(
             entities.append(AOSmithWaterHeater(coordinator, device_id))
 
     _LOGGER.info("Setting up %d water heater entities", len(entities))
-    async_add_entities(entities, True)
+    async_add_entities(entities)
 
 
 class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
-    """A.O. Smith water heater with HomeKit valve service support."""
+    """A.O. Smith water heater with independent state controls."""
 
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
 
@@ -51,7 +51,10 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
             WaterHeaterEntityFeature.TARGET_TEMPERATURE
         )
         self._attr_precision = 1.0
+        
+        # Initialize state variables
         self._power_state = False
+        self._pressurize_state = False
         self._cruise_state = False
         self._half_pipe_state = False
 
@@ -77,13 +80,17 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
                     self._cruise_state = cruise_status == "1"
                     
                     # Update half pipe state (节能半管)
-                    # 可能需要根据实际API字段调整
-                    half_pipe_status = output_data.get("halfPipeStatus")
+                    half_pipe_status = output_data.get("halfPipeStatus")  # 可能需要根据实际API字段调整
                     self._half_pipe_state = half_pipe_status == "1"
+                    
+                    # Update pressurize state (增压)
+                    # 可能需要根据实际API字段调整
+                    pressurize_status = output_data.get("pressurizeStatus")
+                    self._pressurize_state = pressurize_status == "1"
                     
                     break
         except Exception as e:
-            _LOGGER.debug("Error updating states from data for %s: %s", self._device_id, e)
+            _LOGGER.debug("Error updating states from data for %s: %s", self.device_id, e)
 
     @property
     def current_operation(self) -> str:
@@ -95,6 +102,8 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
         
         # Build operation description based on active states
         states = []
+        if self._pressurize_state:
+            states.append("增压")
         if self._cruise_state:
             states.append("巡航")
         if self._half_pipe_state:
@@ -120,7 +129,7 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
                     if val is not None:
                         return float(val)
         except Exception as e:
-            _LOGGER.debug("Error getting current temperature for %s: %s", self._device_id, e)
+            _LOGGER.debug("Error getting current temperature for %s: %s", self.device_id, e)
         return None
 
     @property
@@ -150,7 +159,7 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
         """Set target temperature."""
         temperature = kwargs.get(ATTR_TEMPERATURE)
         if temperature is not None:
-            _LOGGER.info("Setting temperature for %s to %s°C", self._device_id, temperature)
+            _LOGGER.info("Setting temperature for %s to %s°C", self.device_id, temperature)
             
             # Update local state immediately for responsiveness
             self.device_data["target_temperature"] = temperature
@@ -159,46 +168,46 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
             # Send command to device
             try:
                 await self.coordinator.api.async_send_command(
-                    self._device_id, 
+                    self.device_id, 
                     "WaterTempSet", 
                     {"waterTemp": str(int(temperature))}
                 )
-                _LOGGER.info("Temperature set command sent successfully for %s", self._device_id)
+                _LOGGER.info("Temperature set command sent successfully for %s", self.device_id)
             except Exception as e:
-                _LOGGER.error("Failed to set temperature for %s: %s", self._device_id, e)
+                _LOGGER.error("Failed to set temperature for %s: %s", self.device_id, e)
                 # Revert local state on error
                 self.device_data.pop("target_temperature", None)
                 self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the water heater on."""
-        _LOGGER.info("Turning on water heater %s", self._device_id)
+        _LOGGER.info("Turning on water heater %s", self.device_id)
         try:
             await self.coordinator.api.async_send_command(
-                self._device_id, 
+                self.device_id, 
                 "PowerOnOff", 
                 {"powerStatus": "1"}
             )
             self._power_state = True
             self.async_write_ha_state()
-            _LOGGER.info("Water heater %s turned on", self._device_id)
+            _LOGGER.info("Water heater %s turned on", self.device_id)
         except Exception as e:
-            _LOGGER.error("Failed to turn on water heater %s: %s", self._device_id, e)
+            _LOGGER.error("Failed to turn on water heater %s: %s", self.device_id, e)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the water heater off."""
-        _LOGGER.info("Turning off water heater %s", self._device_id)
+        _LOGGER.info("Turning off water heater %s", self.device_id)
         try:
             await self.coordinator.api.async_send_command(
-                self._device_id, 
+                self.device_id, 
                 "PowerOnOff", 
                 {"powerStatus": "0"}
             )
             self._power_state = False
             self.async_write_ha_state()
-            _LOGGER.info("Water heater %s turned off", self._device_id)
+            _LOGGER.info("Water heater %s turned off", self.device_id)
         except Exception as e:
-            _LOGGER.error("Failed to turn off water heater %s: %s", self._device_id, e)
+            _LOGGER.error("Failed to turn off water heater %s: %s", self.device_id, e)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -206,8 +215,9 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
         self._update_states_from_data()
         
         attrs = {
-            "device_id": self._device_id,
+            "device_id": self.device_id,
             "power_state": "on" if self._power_state else "off",
+            "pressurize_state": "on" if self._pressurize_state else "off",
             "cruise_state": "on" if self._cruise_state else "off",
             "half_pipe_state": "on" if self._half_pipe_state else "off",
         }
