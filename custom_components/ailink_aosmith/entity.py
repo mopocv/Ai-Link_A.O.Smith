@@ -7,6 +7,37 @@ from .const import DOMAIN, BRAND
 
 _LOGGER = logging.getLogger(__name__)
 
+
+def extract_output_data(device_data: dict) -> dict:
+    """Parse outputData from device status info."""
+    if not device_data:
+        return {}
+    raw = device_data.get("statusInfo")
+    if not raw:
+        app_status = device_data.get("appDeviceStatusInfoEntity")
+        if isinstance(app_status, dict):
+            raw = app_status.get("statusInfo")
+    if not raw:
+        return {}
+    if isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return {}
+    elif isinstance(raw, dict):
+        parsed = raw
+    else:
+        return {}
+
+    events = parsed.get("events")
+    if isinstance(events, list):
+        for event in events:
+            if event.get("identifier") == "post":
+                output = event.get("outputData")
+                return output if isinstance(output, dict) else {}
+    output = parsed.get("outputData")
+    return output if isinstance(output, dict) else {}
+
 class AOSmithEntity(CoordinatorEntity):
     """Base class for A.O. Smith entities."""
 
@@ -106,6 +137,10 @@ class AOSmithEntity(CoordinatorEntity):
         if isinstance(app_status, dict):
             return app_status.get("statusInfo")
         return None
+
+    def _get_output_data(self) -> dict:
+        """Return parsed output data from status info."""
+        return extract_output_data(self.device_data)
 
     @property
     def translation(self):

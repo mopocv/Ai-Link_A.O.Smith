@@ -1,7 +1,6 @@
 """Platform for Ai-Link A.O. Smith sensor integration with robust parsing, grouping, and value mapping."""
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any, Dict
 
@@ -15,32 +14,11 @@ from .const import (
     DEVICE_CATEGORY_WATER_HEATER,
     DOMAIN,
 )
-from .entity import AOSmithEntity
+from .entity import AOSmithEntity, extract_output_data
 from .translations import load_translation
 
 _LOGGER = logging.getLogger(__name__)
 
-
-def _extract_output_data(device_data: dict) -> dict:
-    """Parse outputData from device status info."""
-    if not device_data:
-        return {}
-    raw = device_data.get("statusInfo")
-    if not raw:
-        app_status = device_data.get("appDeviceStatusInfoEntity")
-        if isinstance(app_status, dict):
-            raw = app_status.get("statusInfo")
-    if not raw:
-        return {}
-    try:
-        parsed = json.loads(raw)
-    except Exception:
-        parsed = raw if isinstance(raw, dict) else {}
-    events = parsed.get("events", []) if isinstance(parsed, dict) else []
-    for event in events:
-        if event.get("identifier") == "post":
-            return event.get("outputData", {}) or {}
-    return {}
 
 
 async def async_setup_entry(
@@ -93,7 +71,7 @@ async def async_setup_entry(
 
         # Create raw sensors for extra keys not in mapping
         if enable_raw_sensors:
-            output = _extract_output_data(device_data)
+            output = extract_output_data(device_data)
             if isinstance(output, dict):
                 for key in output.keys():
                     if key not in sensor_mapping:
@@ -120,7 +98,7 @@ class AOSmithSensor(AOSmithEntity, SensorEntity):
 
     @property
     def native_value(self):
-        output = _extract_output_data(self.device_data)
+        output = self._get_output_data()
         if not output:
             return None
         value = output.get(self._sensor_key)
@@ -139,7 +117,7 @@ class AOSmithSensor(AOSmithEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         """Return all other outputData keys as extra attributes."""
-        output = _extract_output_data(self.device_data)
+        output = self._get_output_data()
         attrs = {}
         for k, v in output.items():
             if k != self._sensor_key:
@@ -160,9 +138,13 @@ class AOSmithRawSensor(AOSmithEntity, SensorEntity):
 
     @property
     def native_value(self):
-        output = _extract_output_data(self.device_data)
+        output = self._get_output_data()
         return output.get(self._sensor_key)
 
     @property
     def extra_state_attributes(self):
-        return {k: v for k, v in _extract_output_data(self.device_data).items() if k != self._sensor_key}
+        return {
+            k: v
+            for k, v in self._get_output_data().items()
+            if k != self._sensor_key
+        }

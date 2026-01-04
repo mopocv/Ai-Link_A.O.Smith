@@ -1,7 +1,6 @@
 """Support for A.O. Smith independent state switches."""
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
 
@@ -31,6 +30,7 @@ async def async_setup_entry(
             entities.extend([
                 AOSmithCruiseSwitch(coordinator, device_id),
                 AOSmithHalfPipeSwitch(coordinator, device_id),
+                AOSmithPressurizeSwitch(coordinator, device_id),
             ])
 
     _LOGGER.info("Setting up %d switch entities", len(entities))
@@ -66,20 +66,10 @@ class AOSmithBaseSwitch(AOSmithEntity, SwitchEntity):
 
     def _update_state_from_data(self):
         """Update switch state from device data."""
-        status_info = self._get_status_info()
-        if not status_info:
+        output_data = self._get_output_data()
+        if not output_data:
             return
-            
-        try:
-            data = json.loads(status_info)
-            events = data.get("events", [])
-            for event in events:
-                if event.get("identifier") == "post":
-                    output_data = event.get("outputData", {})
-                    self._is_on = self._get_state_from_output(output_data)
-                    break
-        except Exception as e:
-            _LOGGER.debug("Error updating %s state for %s: %s", self._switch_key, self._device_id, e)
+        self._is_on = self._get_state_from_output(output_data)
 
     def _get_state_from_output(self, output_data: dict) -> bool:
         """Extract switch state from output data - to be implemented by subclasses."""
@@ -180,4 +170,34 @@ class AOSmithHalfPipeSwitch(AOSmithBaseSwitch):
             self._device_id, 
             "setHalfPipeCircle", 
             {"setHalfPipeCircle": "0"}
+        )
+
+
+class AOSmithPressurizeSwitch(AOSmithBaseSwitch):
+    """Switch for pressurize mode (增压)."""
+
+    def __init__(self, coordinator, device_id: str):
+        super().__init__(coordinator, device_id, "pressurize")
+
+    def _get_state_from_output(self, output_data: dict) -> bool:
+        """Get pressurize state from output data."""
+        pressurize_status = output_data.get("pressurizeStatus")
+        if pressurize_status is None:
+            pressurize_status = output_data.get("pressurize")
+        return str(pressurize_status) == "1"
+
+    async def _send_turn_on_command(self):
+        """Turn on pressurize mode."""
+        await self.coordinator.api.async_send_command(
+            self._device_id,
+            "PressurizeOnOff",
+            {"pressurizeStatus": "1"},
+        )
+
+    async def _send_turn_off_command(self):
+        """Turn off pressurize mode."""
+        await self.coordinator.api.async_send_command(
+            self._device_id,
+            "PressurizeOnOff",
+            {"pressurizeStatus": "0"},
         )

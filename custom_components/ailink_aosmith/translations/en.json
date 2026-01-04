@@ -87,15 +87,13 @@
         "name": "Zero Cold Water", 
         "icon": "mdi:water-sync"
       },
+      "pressurize": {
+        "name": "Pressurize",
+        "icon": "mdi:water-pump"
+      },
       "half_pipe": {
         "name": "Eco Zero Cold Water",
         "icon": "mdi:pipe"
-      }
-    },
-    "select": {
-      "cruise_timer": {
-        "name": "Cruise Timer",
-        "icon": "mdi:timer"
       }
     }
   }
