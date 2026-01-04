@@ -96,6 +96,18 @@
         "name": "Half Pipe Mode",
         "icon": "mdi:pipe"
       }
+    },
+    "number": {
+      "cruise_timer": {
+        "name": "Cruise Timer",
+        "icon": "mdi:timer"
+      }
+    },
+    "select": {
+      "cruise_timer": {
+        "name": "Cruise Timer",
+        "icon": "mdi:timer"
+      }
     }
   }
 }

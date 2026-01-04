@@ -96,6 +96,18 @@
         "name": "节能半管模式",
         "icon": "mdi:pipe"
       }
+    },
+    "number": {
+      "cruise_timer": {
+        "name": "零冷水循环时长",
+        "icon": "mdi:timer"
+      }
+    },
+    "select": {
+      "cruise_timer": {
+        "name": "零冷水循环时长",
+        "icon": "mdi:timer"
+      }
     }
   }
 }
