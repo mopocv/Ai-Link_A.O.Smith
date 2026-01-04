@@ -1,12 +1,30 @@
 """Config flow for Ai-Link A.O. Smith."""
-import voluptuous as vol
 import logging
+
+import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 
-from .const import DOMAIN, CONF_USER_ID, CONF_FAMILY_ID, CONF_ACCESS_TOKEN, CONF_MOBILE, CONF_COOKIE
+from .const import (
+    CONF_ACCESS_TOKEN,
+    CONF_COOKIE,
+    CONF_ENABLE_RAW_SENSORS,
+    CONF_FAMILY_ID,
+    CONF_LANGUAGE,
+    CONF_MOBILE,
+    CONF_UPDATE_INTERVAL,
+    CONF_USER_ID,
+    DEFAULT_ENABLE_RAW_SENSORS,
+    DEFAULT_UPDATE_INTERVAL,
+    DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
+LANGUAGE_OPTIONS = {
+    "auto": "Auto (Home Assistant)",
+    "en": "English",
+    "zh-Hans": "简体中文",
+}
 
 class AOSmithConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Ai-Link A.O. Smith."""
@@ -80,3 +98,44 @@ class AOSmithConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         finally:
             if api:
                 await api.close()
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Get the options flow for this handler."""
+        return AOSmithOptionsFlow(config_entry)
+
+
+class AOSmithOptionsFlow(config_entries.OptionsFlow):
+    """Handle options for Ai-Link A.O. Smith."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        self._config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        """Manage the options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        options = self._config_entry.options
+        data_schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_UPDATE_INTERVAL,
+                    default=options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
+                ): vol.All(vol.Coerce(int), vol.Range(min=10, max=3600)),
+                vol.Optional(
+                    CONF_LANGUAGE,
+                    default=options.get(CONF_LANGUAGE, "auto"),
+                ): vol.In(LANGUAGE_OPTIONS),
+                vol.Optional(
+                    CONF_ENABLE_RAW_SENSORS,
+                    default=options.get(
+                        CONF_ENABLE_RAW_SENSORS,
+                        DEFAULT_ENABLE_RAW_SENSORS,
+                    ),
+                ): bool,
+            }
+        )
+
+        return self.async_show_form(step_id="init", data_schema=data_schema)

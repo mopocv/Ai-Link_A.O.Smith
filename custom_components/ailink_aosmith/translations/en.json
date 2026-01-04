@@ -19,6 +19,19 @@
       "auth_error": "Authentication failed, please check your credentials."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ai-Link A.O. Smith Options",
+        "description": "Adjust polling interval, language, and raw sensor behavior."
+      }
+    },
+    "data": {
+      "update_interval": "Update interval (seconds)",
+      "language": "Language",
+      "enable_raw_sensors": "Enable raw sensors for unmapped keys"
+    }
+  },
   "entity": {
     "sensor": {
       "waterTemp": {"name": "Current Temperature", "group": "temperature", "unit": "°C", "icon": "mdi:thermometer"},

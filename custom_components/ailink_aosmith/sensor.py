@@ -3,50 +3,22 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from typing import Any, Dict
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, DEVICE_CATEGORY_WATER_HEATER
+from .const import (
+    CONF_ENABLE_RAW_SENSORS,
+    DEFAULT_ENABLE_RAW_SENSORS,
+    DEVICE_CATEGORY_WATER_HEATER,
+    DOMAIN,
+)
 from .entity import AOSmithEntity
+from .translations import load_translation
 
 _LOGGER = logging.getLogger(__name__)
-TRANSLATIONS_DIRNAME = "translations"
-
-
-def _translations_dir(hass: HomeAssistant) -> str:
-    """Return the path to translations JSON."""
-    try:
-        path = hass.config.path("custom_components", DOMAIN, TRANSLATIONS_DIRNAME)
-        if os.path.isdir(path):
-            return path
-    except Exception:
-        pass
-    return os.path.join(os.path.dirname(__file__), TRANSLATIONS_DIRNAME)
-
-
-def load_config(hass: HomeAssistant, lang_code: str = "zh-Hans") -> dict:
-    """Load sensor translation/config JSON."""
-    translations_path = _translations_dir(hass)
-    file_path = os.path.join(translations_path, f"{lang_code}.json")
-    if not os.path.exists(file_path):
-        _LOGGER.debug(
-            "Translation file for %s not found at %s, falling back to zh-Hans.json",
-            lang_code, file_path
-        )
-        file_path = os.path.join(translations_path, "zh-Hans.json")
-    if not os.path.exists(file_path):
-        _LOGGER.warning("No translation file found at %s.", file_path)
-        return {}
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        _LOGGER.exception("Failed to load translation JSON %s: %s", file_path, e)
-        return {}
 
 
 def _extract_output_data(device_data: dict) -> dict:
@@ -76,8 +48,7 @@ async def async_setup_entry(
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
     await coordinator.async_config_entry_first_refresh()
 
-    lang_code = getattr(hass.config, "language", "zh-Hans") or "zh-Hans"
-    cfg = load_config(hass, lang_code)
+    cfg = load_translation(hass, config_entry)
 
     entity_sensors = cfg.get("entity", {}).get("sensor", {}) or {}
     sensor_mapping: Dict[str, Dict[str, Any]] = {}
@@ -104,6 +75,11 @@ async def async_setup_entry(
         }
 
     entities = []
+    enable_raw_sensors = config_entry.options.get(
+        CONF_ENABLE_RAW_SENSORS,
+        DEFAULT_ENABLE_RAW_SENSORS,
+    )
+
     for device_id, device_data in coordinator.data.items():
         if str(device_data.get("deviceCategory", "")) != DEVICE_CATEGORY_WATER_HEATER:
             continue
@@ -112,11 +88,12 @@ async def async_setup_entry(
             entities.append(AOSmithSensor(coordinator, device_id, sensor_key, sensor_mapping))
 
         # Create raw sensors for extra keys not in mapping
-        output = _extract_output_data(device_data)
-        if isinstance(output, dict):
-            for key in output.keys():
-                if key not in sensor_mapping:
-                    entities.append(AOSmithRawSensor(coordinator, device_id, key))
+        if enable_raw_sensors:
+            output = _extract_output_data(device_data)
+            if isinstance(output, dict):
+                for key in output.keys():
+                    if key not in sensor_mapping:
+                        entities.append(AOSmithRawSensor(coordinator, device_id, key))
 
     _LOGGER.info("Setting up %d sensors for %s", len(entities), config_entry.entry_id)
     async_add_entities(entities, True)
