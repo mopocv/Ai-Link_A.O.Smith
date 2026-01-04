@@ -21,6 +21,10 @@ def _extract_output_data(device_data: dict) -> dict:
         return {}
     raw = device_data.get("statusInfo")
     if not raw:
+        app_status = device_data.get("appDeviceStatusInfoEntity")
+        if isinstance(app_status, dict):
+            raw = app_status.get("statusInfo")
+    if not raw:
         return {}
     try:
         parsed = json.loads(raw)
@@ -85,6 +89,7 @@ class AOSmithCruiseTimerSelect(AOSmithEntity, SelectEntity):
             output.get("WaterCruiseTimer")
             or output.get("waterCruiseTimer")
             or output.get("cruiseTimer")
+            or output.get("curiesTime")
         )
         if raw_value is None:
             return None
@@ -115,3 +120,4 @@ class AOSmithCruiseTimerSelect(AOSmithEntity, SelectEntity):
             )
             self.device_data.pop("cruise_timer", None)
             self.async_write_ha_state()
+

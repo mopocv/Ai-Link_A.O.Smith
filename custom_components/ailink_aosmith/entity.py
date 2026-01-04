@@ -67,7 +67,7 @@ class AOSmithEntity(CoordinatorEntity):
 
     def _get_model_from_status(self):
         """Extract model from status info."""
-        status_info = self.device_data.get("statusInfo")
+        status_info = self._get_status_info()
         if not status_info:
             return None
         try:
@@ -80,7 +80,7 @@ class AOSmithEntity(CoordinatorEntity):
 
     def _get_firmware_version(self):
         """Extract firmware version from device data."""
-        status_info = self.device_data.get("statusInfo")
+        status_info = self._get_status_info()
         if not status_info:
             return None
         try:
@@ -96,6 +96,16 @@ class AOSmithEntity(CoordinatorEntity):
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             _LOGGER.debug("Error parsing firmware version: %s", e)
             return None
+
+    def _get_status_info(self):
+        """Return status info from known device data locations."""
+        status_info = self.device_data.get("statusInfo")
+        if status_info:
+            return status_info
+        app_status = self.device_data.get("appDeviceStatusInfoEntity")
+        if isinstance(app_status, dict):
+            return app_status.get("statusInfo")
+        return None
 
     @property
     def translation(self):
