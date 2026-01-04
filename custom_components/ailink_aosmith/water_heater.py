@@ -1,7 +1,6 @@
 """Support for A.O. Smith water heaters with independent state controls."""
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
 
@@ -56,39 +55,31 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
         self._power_state = False
         self._cruise_state = False
         self._half_pipe_state = False
+        self._pressurize_state = False
 
     def _update_states_from_data(self):
         """Update internal states from device data."""
-        status_info = self._get_status_info()
-        if not status_info:
+        output_data = self._get_output_data()
+        if not output_data:
             return
-            
-        try:
-            data = json.loads(status_info)
-            events = data.get("events", [])
-            for event in events:
-                if event.get("identifier") == "post":
-                    output_data = event.get("outputData", {})
-                    
-                    # Update power state
-                    power_status = output_data.get("powerStatus")
-                    self._power_state = power_status == "1"
-                    
-                    # Update cruise state (零冷水)
-                    cruise_status = output_data.get("cruiseStatus")
-                    self._cruise_state = cruise_status == "1"
-                    
-                    # Update half pipe state (节能半管)
-                    half_pipe_status = output_data.get("halfPipeStatus")
-                    if half_pipe_status is None:
-                        half_pipe_status = output_data.get("setHalfPipeCircle")
-                    if half_pipe_status is None:
-                        half_pipe_status = output_data.get("halfPipeCircle")
-                    self._half_pipe_state = str(half_pipe_status) == "1"
-                    
-                    break
-        except Exception as e:
-            _LOGGER.debug("Error updating states from data for %s: %s", self.device_id, e)
+
+        power_status = output_data.get("powerStatus")
+        self._power_state = power_status == "1"
+
+        cruise_status = output_data.get("cruiseStatus")
+        self._cruise_state = cruise_status == "1"
+
+        half_pipe_status = output_data.get("halfPipeStatus")
+        if half_pipe_status is None:
+            half_pipe_status = output_data.get("setHalfPipeCircle")
+        if half_pipe_status is None:
+            half_pipe_status = output_data.get("halfPipeCircle")
+        self._half_pipe_state = str(half_pipe_status) == "1"
+
+        pressurize_status = output_data.get("pressurizeStatus")
+        if pressurize_status is None:
+            pressurize_status = output_data.get("pressurize")
+        self._pressurize_state = str(pressurize_status) == "1"
 
     @property
     def current_operation(self) -> str:
@@ -104,6 +95,8 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
             states.append("零冷水")
         if self._half_pipe_state:
             states.append("节能零冷水")
+        if self._pressurize_state:
+            states.append("增压")
         
         if states:
             return " | ".join(states)
@@ -113,19 +106,15 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
     @property
     def current_temperature(self) -> float | None:
         """Return current water temperature."""
-        status_info = self._get_status_info()
-        if not status_info:
+        output_data = self._get_output_data()
+        if not output_data:
             return None
-        try:
-            data = json.loads(status_info)
-            events = data.get("events", [])
-            for event in events:
-                if event.get("identifier") == "post":
-                    val = event.get("outputData", {}).get("waterTemp")
-                    if val is not None:
-                        return float(val)
-        except Exception as e:
-            _LOGGER.debug("Error getting current temperature for %s: %s", self.device_id, e)
+        val = output_data.get("waterTemp")
+        if val is not None:
+            try:
+                return float(val)
+            except (TypeError, ValueError):
+                return None
         return None
 
     @property
@@ -215,23 +204,23 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
             "power_state": "on" if self._power_state else "off",
             "cruise_state": "on" if self._cruise_state else "off",
             "half_pipe_state": "on" if self._half_pipe_state else "off",
+            "pressurize_state": "on" if self._pressurize_state else "off",
         }
         
-        status_info = self._get_status_info()
-        if status_info:
-            try:
-                data = json.loads(status_info)
-                events = data.get("events", [])
-                for event in events:
-                    if event.get("identifier") == "post":
-                        output_data = event.get("outputData", {})
-                        # Add relevant output data as attributes
-                        for key in ["waterFlow", "inWaterTemp", "outWaterTemp", "fireWorkTime", 
-                                  "totalWaterNum", "errorCode", "powerStatus", "deviceStatus"]:
-                            if key in output_data:
-                                attrs[key] = output_data[key]
-                        break
-            except Exception as e:
-                _LOGGER.debug("Error parsing status info for attributes: %s", e)
+        output_data = self._get_output_data()
+        if output_data:
+            for key in [
+                "waterFlow",
+                "inWaterTemp",
+                "outWaterTemp",
+                "fireWorkTime",
+                "totalWaterNum",
+                "errorCode",
+                "powerStatus",
+                "deviceStatus",
+                "pressurizeStatus",
+            ]:
+                if key in output_data:
+                    attrs[key] = output_data[key]
                 
         return attrs

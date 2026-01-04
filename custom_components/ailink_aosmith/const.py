@@ -1,8 +1,5 @@
 """Constants for Ai-Link A.O. Smith integration."""
 
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.const import UnitOfTemperature, UnitOfVolume
-
 # Integration domain/brand
 DOMAIN = "ailink_aosmith"
 BRAND = "Ai-Link A.O. Smith"
@@ -38,11 +35,6 @@ WATER_HEATER_MIN_TEMP = 35.0
 WATER_HEATER_MAX_TEMP = 70.0
 WATER_HEATER_DEFAULT_TEMP = 38.0
 WATER_HEATER_TEMP_PRECISION = 1.0
-
-# Cruise timer limits (minutes)
-CRUISE_TIMER_MIN = 1
-CRUISE_TIMER_MAX = 99
-CRUISE_TIMER_STEP = 1
 
 # HTTP / API defaults
 API_BASE_URL = "https://ailink-api.hotwater.com.cn"
