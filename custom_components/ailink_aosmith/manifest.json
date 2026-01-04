@@ -4,7 +4,7 @@
   "codeowners": [
     "@mopocv"
   ],
-  "version": "1.0.2",
+  "version": "1.0.3",
   "documentation": "https://github.com/mopocv/Ai-Link_A.O.Smith",
   "requirements": [
     "aiohttp>=3.8.0"
