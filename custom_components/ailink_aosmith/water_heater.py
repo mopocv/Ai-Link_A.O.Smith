@@ -80,8 +80,12 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
                     self._cruise_state = cruise_status == "1"
                     
                     # Update half pipe state (节能半管)
-                    half_pipe_status = output_data.get("halfPipeStatus")  # 可能需要根据实际API字段调整
-                    self._half_pipe_state = half_pipe_status == "1"
+                    half_pipe_status = output_data.get("halfPipeStatus")
+                    if half_pipe_status is None:
+                        half_pipe_status = output_data.get("setHalfPipeCircle")
+                    if half_pipe_status is None:
+                        half_pipe_status = output_data.get("halfPipeCircle")
+                    self._half_pipe_state = str(half_pipe_status) == "1"
                     
                     # Update pressurize state (增压)
                     # 可能需要根据实际API字段调整
