@@ -25,7 +25,7 @@ DEFAULT_UPDATE_INTERVAL = 60
 DEFAULT_ENABLE_RAW_SENSORS = True
 
 # Platforms provided by this integration
-PLATFORMS = ["water_heater", "sensor", "switch", "number"]  # 添加 switch 平台
+PLATFORMS = ["water_heater", "sensor", "switch", "number", "select"]  # 添加 switch 平台
 
 # Coordinator update interval (seconds)
 UPDATE_INTERVAL = DEFAULT_UPDATE_INTERVAL
@@ -41,7 +41,7 @@ WATER_HEATER_TEMP_PRECISION = 1.0
 
 # Cruise timer limits (minutes)
 CRUISE_TIMER_MIN = 1
-CRUISE_TIMER_MAX = 120
+CRUISE_TIMER_MAX = 99
 CRUISE_TIMER_STEP = 1
 
 # HTTP / API defaults
