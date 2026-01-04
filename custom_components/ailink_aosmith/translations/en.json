@@ -97,13 +97,7 @@
         "icon": "mdi:pipe"
       }
     },
-    "number": {
-      "cruise_timer": {
-        "name": "Cruise Timer",
-        "icon": "mdi:timer"
-      }
-    },
-    "select": {
+    "fan": {
       "cruise_timer": {
         "name": "Cruise Timer",
         "icon": "mdi:timer"
