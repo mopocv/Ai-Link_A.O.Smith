@@ -14,15 +14,21 @@ CONF_FAMILY_ID = "family_id"
 CONF_DEVICE_ID = "device_id"
 CONF_MOBILE = "mobile"
 CONF_COOKIE = "cookie"
+CONF_LANGUAGE = "language"
+CONF_UPDATE_INTERVAL = "update_interval"
+CONF_ENABLE_RAW_SENSORS = "enable_raw_sensors"
 
 # Default values
 DEFAULT_NAME = "Ai-Link A.O. Smith Water Heater"
+DEFAULT_LANGUAGE = "zh-Hans"
+DEFAULT_UPDATE_INTERVAL = 60
+DEFAULT_ENABLE_RAW_SENSORS = True
 
 # Platforms provided by this integration
 PLATFORMS = ["water_heater", "sensor", "switch"]  # 添加 switch 平台
 
 # Coordinator update interval (seconds)
-UPDATE_INTERVAL = 60
+UPDATE_INTERVAL = DEFAULT_UPDATE_INTERVAL
 
 # Device category that identifies water heaters (string or numeric in APIs)
 DEVICE_CATEGORY_WATER_HEATER = "19"

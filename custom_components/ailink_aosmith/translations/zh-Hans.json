@@ -19,6 +19,19 @@
       "auth_error": "认证失败，请检查凭证是否正确。"
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ai-Link 史密斯 选项",
+        "description": "调整轮询间隔、语言与原始传感器开关。"
+      }
+    },
+    "data": {
+      "update_interval": "更新间隔（秒）",
+      "language": "语言",
+      "enable_raw_sensors": "为未映射字段启用原始传感器"
+    }
+  },
   "entity": {
     "sensor": {
       "waterTemp": {"name": "当前温度", "group": "temperature", "unit": "°C", "icon": "mdi:thermometer"},

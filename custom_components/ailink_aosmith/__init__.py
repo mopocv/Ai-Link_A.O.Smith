@@ -2,7 +2,6 @@
 import asyncio
 import json
 import logging
-import os
 from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
@@ -10,41 +9,16 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.exceptions import ConfigEntryNotReady
 
-from .const import DOMAIN, PLATFORMS, UPDATE_INTERVAL
+from .const import (
+    CONF_UPDATE_INTERVAL,
+    DEFAULT_UPDATE_INTERVAL,
+    DOMAIN,
+    PLATFORMS,
+)
 from .api import AOSmithAPI
+from .translations import load_translation, get_language
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def load_translation(hass: HomeAssistant) -> dict:
-    """Load translation configuration."""
-    try:
-        # 获取自定义组件目录
-        custom_components_dir = os.path.dirname(os.path.dirname(__file__))
-        integration_dir = os.path.join(custom_components_dir, DOMAIN)
-        translations_dir = os.path.join(integration_dir, 'translations')
-        
-        # 确定语言
-        language = hass.config.language
-        if not language:
-            language = "zh-Hans"
-        
-        # 尝试加载对应语言的翻译文件
-        translation_file = os.path.join(translations_dir, f"{language}.json")
-        if not os.path.exists(translation_file):
-            # 回退到中文
-            translation_file = os.path.join(translations_dir, "zh-Hans.json")
-        
-        if os.path.exists(translation_file):
-            with open(translation_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        else:
-            _LOGGER.warning("Translation file not found: %s", translation_file)
-            
-    except Exception as e:
-        _LOGGER.error("Failed to load translation: %s", e)
-    
-    return {}
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -66,13 +40,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await api.async_authenticate()
         
         # Create coordinator
-        coordinator = AOSmithDataUpdateCoordinator(hass, api)
+        update_interval = entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
+        coordinator = AOSmithDataUpdateCoordinator(
+            hass,
+            api,
+            update_interval=timedelta(seconds=update_interval),
+        )
         # Attach the config entry to coordinator so entities can reference it
         coordinator.config_entry = entry
-        
+
         # 加载翻译配置
-        coordinator.translation = load_translation(hass)
-        _LOGGER.info("Loaded translation for language: %s", hass.config.language)
+        coordinator.translation = load_translation(hass, entry)
+        _LOGGER.info("Loaded translation for language: %s", get_language(hass, entry))
         
         # Fetch initial data
         await coordinator.async_config_entry_first_refresh()
@@ -131,7 +110,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class AOSmithDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching A.O. Smith data."""
     
-    def __init__(self, hass, api):
+    def __init__(self, hass, api, update_interval: timedelta):
         """Initialize global data updater."""
         self.api = api
         self.data = {}
@@ -141,7 +120,7 @@ class AOSmithDataUpdateCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(seconds=UPDATE_INTERVAL),
+            update_interval=update_interval,
         )
     
     async def _async_update_data(self):

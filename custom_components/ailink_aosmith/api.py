@@ -1,4 +1,5 @@
 """A.O. Smith API client."""
+import asyncio
 import aiohttp
 import json
 import time
