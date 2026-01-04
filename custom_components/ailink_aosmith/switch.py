@@ -192,7 +192,11 @@ class AOSmithHalfPipeSwitch(AOSmithBaseSwitch):
         """Get half pipe state from output data."""
         # 根据实际API字段调整
         half_pipe_status = output_data.get("halfPipeStatus")
-        return half_pipe_status == "1"
+        if half_pipe_status is None:
+            half_pipe_status = output_data.get("setHalfPipeCircle")
+        if half_pipe_status is None:
+            half_pipe_status = output_data.get("halfPipeCircle")
+        return str(half_pipe_status) == "1"
 
     async def _send_turn_on_command(self):
         """Turn on half pipe mode."""
