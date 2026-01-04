@@ -54,13 +54,12 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
         
         # Initialize state variables
         self._power_state = False
-        self._pressurize_state = False
         self._cruise_state = False
         self._half_pipe_state = False
 
     def _update_states_from_data(self):
         """Update internal states from device data."""
-        status_info = self.device_data.get("statusInfo")
+        status_info = self._get_status_info()
         if not status_info:
             return
             
@@ -87,11 +86,6 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
                         half_pipe_status = output_data.get("halfPipeCircle")
                     self._half_pipe_state = str(half_pipe_status) == "1"
                     
-                    # Update pressurize state (增压)
-                    # 可能需要根据实际API字段调整
-                    pressurize_status = output_data.get("pressurizeStatus")
-                    self._pressurize_state = pressurize_status == "1"
-                    
                     break
         except Exception as e:
             _LOGGER.debug("Error updating states from data for %s: %s", self.device_id, e)
@@ -106,12 +100,10 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
         
         # Build operation description based on active states
         states = []
-        if self._pressurize_state:
-            states.append("增压")
         if self._cruise_state:
-            states.append("巡航")
+            states.append("零冷水")
         if self._half_pipe_state:
-            states.append("节能半管")
+            states.append("节能零冷水")
         
         if states:
             return " | ".join(states)
@@ -121,7 +113,7 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
     @property
     def current_temperature(self) -> float | None:
         """Return current water temperature."""
-        status_info = self.device_data.get("statusInfo")
+        status_info = self._get_status_info()
         if not status_info:
             return None
         try:
@@ -221,12 +213,11 @@ class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
         attrs = {
             "device_id": self.device_id,
             "power_state": "on" if self._power_state else "off",
-            "pressurize_state": "on" if self._pressurize_state else "off",
             "cruise_state": "on" if self._cruise_state else "off",
             "half_pipe_state": "on" if self._half_pipe_state else "off",
         }
         
-        status_info = self.device_data.get("statusInfo")
+        status_info = self._get_status_info()
         if status_info:
             try:
                 data = json.loads(status_info)

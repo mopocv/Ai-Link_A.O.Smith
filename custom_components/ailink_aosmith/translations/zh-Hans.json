@@ -78,26 +78,21 @@
       "operation_mode": {
         "off": "关闭", 
         "heat": "加热",
-        "pressurize": "增压",
-        "cruise": "巡航", 
-        "half_pipe": "节能半管"
+        "cruise": "零冷水", 
+        "half_pipe": "节能零冷水"
       }
     },
     "switch": {
-      "pressurize": {
-        "name": "增压模式",
-        "icon": "mdi:water-pump"
-      },
       "cruise": {
-        "name": "巡航模式", 
+        "name": "零冷水", 
         "icon": "mdi:water-sync"
       },
       "half_pipe": {
-        "name": "节能半管模式",
+        "name": "节能零冷水",
         "icon": "mdi:pipe"
       }
     },
-    "fan": {
+    "select": {
       "cruise_timer": {
         "name": "零冷水循环时长",
         "icon": "mdi:timer"

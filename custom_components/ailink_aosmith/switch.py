@@ -29,7 +29,6 @@ async def async_setup_entry(
         if str(device_data.get("deviceCategory")) == DEVICE_CATEGORY_WATER_HEATER:
             # Add individual state switches
             entities.extend([
-                AOSmithPressurizeSwitch(coordinator, device_id),
                 AOSmithCruiseSwitch(coordinator, device_id),
                 AOSmithHalfPipeSwitch(coordinator, device_id),
             ])
@@ -67,7 +66,7 @@ class AOSmithBaseSwitch(AOSmithEntity, SwitchEntity):
 
     def _update_state_from_data(self):
         """Update switch state from device data."""
-        status_info = self.device_data.get("statusInfo")
+        status_info = self._get_status_info()
         if not status_info:
             return
             
@@ -121,37 +120,6 @@ class AOSmithBaseSwitch(AOSmithEntity, SwitchEntity):
     async def _send_turn_off_command(self):
         """Send command to turn off the switch - to be implemented by subclasses."""
         pass
-
-
-class AOSmithPressurizeSwitch(AOSmithBaseSwitch):
-    """Switch for pressurize mode."""
-    
-    def __init__(self, coordinator, device_id: str):
-        super().__init__(coordinator, device_id, "pressurize")
-
-    def _get_state_from_output(self, output_data: dict) -> bool:
-        """Get pressurize state from output data."""
-        # 根据实际API字段调整
-        pressurize_status = output_data.get("pressurizeStatus")
-        return pressurize_status == "1"
-
-    async def _send_turn_on_command(self):
-        """Turn on pressurize mode."""
-        # 根据实际API命令调整
-        await self.coordinator.api.async_send_command(
-            self._device_id, 
-            "PressurizeMode", 
-            {"pressurizeStatus": "1"}
-        )
-
-    async def _send_turn_off_command(self):
-        """Turn off pressurize mode."""
-        # 根据实际API命令调整
-        await self.coordinator.api.async_send_command(
-            self._device_id, 
-            "PressurizeMode", 
-            {"pressurizeStatus": "0"}
-        )
 
 
 class AOSmithCruiseSwitch(AOSmithBaseSwitch):

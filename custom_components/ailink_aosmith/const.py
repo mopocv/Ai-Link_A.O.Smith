@@ -25,7 +25,7 @@ DEFAULT_UPDATE_INTERVAL = 60
 DEFAULT_ENABLE_RAW_SENSORS = True
 
 # Platforms provided by this integration
-PLATFORMS = ["water_heater", "sensor", "switch", "fan"]  # 添加 switch 平台
+PLATFORMS = ["water_heater", "sensor", "switch"]
 
 # Coordinator update interval (seconds)
 UPDATE_INTERVAL = DEFAULT_UPDATE_INTERVAL
@@ -48,7 +48,6 @@ CRUISE_TIMER_STEP = 1
 API_BASE_URL = "https://ailink-api.hotwater.com.cn"
 
 # Switch types
-SWITCH_TYPE_PRESSURIZE = "pressurize"
 SWITCH_TYPE_CRUISE = "cruise"
 SWITCH_TYPE_HALF_PIPE = "half_pipe"
 
