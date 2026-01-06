@@ -71,7 +71,6 @@ class AOSmithEntity(CoordinatorEntity):
             "manufacturer": BRAND,
             "model": device_model,
             "sw_version": self._get_firmware_version(),
-            "via_device": (DOMAIN, self.coordinator.config_entry.entry_id),
         }
 
         _LOGGER.debug(

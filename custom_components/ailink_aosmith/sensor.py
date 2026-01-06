@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
@@ -15,7 +15,7 @@ from .const import (
     DOMAIN,
 )
 from .entity import AOSmithEntity, extract_output_data
-from .translations import load_translation
+from .translations import async_load_translation
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ async def async_setup_entry(
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
     await coordinator.async_config_entry_first_refresh()
 
-    cfg = load_translation(hass, config_entry)
+    cfg = await async_load_translation(hass, config_entry)
 
     entity_sensors = cfg.get("entity", {}).get("sensor", {}) or {}
     sensor_mapping: Dict[str, Dict[str, Any]] = {}
@@ -48,7 +48,7 @@ async def async_setup_entry(
             value_map = {}
             unit = None
             icon = None
-        if isinstance(unit, str) and unit.strip() == "":
+        if not unit or (isinstance(unit, str) and unit.strip() == ""):
             unit = None
 
         sensor_mapping[key] = {
@@ -96,11 +96,13 @@ class AOSmithSensor(AOSmithEntity, SensorEntity):
         self._attr_icon = cfg.get("icon")
         self._attr_unique_id = f"ailink_aosmith_{device_id}_{sensor_key}"
         unit = cfg.get("unit")
-        if isinstance(unit, str) and unit.strip() == "":
+        if not unit or (isinstance(unit, str) and unit.strip() == ""):
             unit = None
         self._attr_native_unit_of_measurement = unit
         self._value_map = cfg.get("value_map", None)
         self._group = cfg.get("group", "default")
+        if self._value_map and unit is None:
+            self._attr_device_class = SensorDeviceClass.ENUM
 
     @property
     def native_value(self):

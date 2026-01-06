@@ -16,7 +16,7 @@ from .const import (
     PLATFORMS,
 )
 from .api import AOSmithAPI
-from .translations import load_translation, get_language
+from .translations import async_load_translation, get_language
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coordinator.config_entry = entry
 
         # 加载翻译配置
-        coordinator.translation = load_translation(hass, entry)
+        coordinator.translation = await async_load_translation(hass, entry)
         _LOGGER.info("Loaded translation for language: %s", get_language(hass, entry))
         
         # Fetch initial data
