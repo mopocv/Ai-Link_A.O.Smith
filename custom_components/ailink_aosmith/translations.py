@@ -35,7 +35,13 @@ def get_language(hass: HomeAssistant, entry: ConfigEntry | None = None) -> str:
     return hass.config.language or DEFAULT_LANGUAGE
 
 
-def load_translation(
+def _load_json(translation_file: str) -> dict[str, Any]:
+    """Load translation JSON from disk."""
+    with open(translation_file, "r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+async def async_load_translation(
     hass: HomeAssistant,
     entry: ConfigEntry | None = None,
     language: str | None = None,
@@ -59,8 +65,7 @@ def load_translation(
         return {}
 
     try:
-        with open(translation_file, "r", encoding="utf-8") as handle:
-            return json.load(handle)
+        return await hass.async_add_executor_job(_load_json, translation_file)
     except Exception as err:
         _LOGGER.exception("Failed to load translation from %s: %s", translation_file, err)
         return {}
