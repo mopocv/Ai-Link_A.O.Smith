@@ -48,6 +48,9 @@ async def async_setup_entry(
             value_map = {}
             unit = None
             icon = None
+        if isinstance(unit, str) and unit.strip() == "":
+            unit = None
+
         sensor_mapping[key] = {
             "name": name,
             "unit": unit,
@@ -92,7 +95,10 @@ class AOSmithSensor(AOSmithEntity, SensorEntity):
         self._attr_name = cfg.get("name", sensor_key)
         self._attr_icon = cfg.get("icon")
         self._attr_unique_id = f"ailink_aosmith_{device_id}_{sensor_key}"
-        self._attr_native_unit_of_measurement = cfg.get("unit")
+        unit = cfg.get("unit")
+        if isinstance(unit, str) and unit.strip() == "":
+            unit = None
+        self._attr_native_unit_of_measurement = unit
         self._value_map = cfg.get("value_map", None)
         self._group = cfg.get("group", "default")
 
