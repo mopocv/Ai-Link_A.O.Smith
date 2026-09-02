@@ -16,7 +16,7 @@ class AOSmithAPI:
     
     def __init__(self, access_token: str, user_id: str, family_id: str, cookie: str = None, mobile: str = None):
         """Initialize the API client."""
-        self._access_token = access_token
+        self._access_token = access_token.removeprefix("Bearer ").strip()
         self._user_id = user_id
         self._family_id = family_id
         self._cookie = cookie
@@ -180,7 +180,7 @@ class AOSmithAPI:
             _LOGGER.warning("Failed to get device status for %s: %s", device_id, e)
             return None
     
-    async def async_send_command(self, device_id: str, service_identifier: str, input_data: Dict[str, Any] = None):
+    async def async_send_command(self, device_id: str, service_identifier: str, input_data: Dict[str, Any] = None, *, device_type: str = "JSQ31-VJS"):
         """Send control command to device."""
         if not self._session:
             raise Exception("API not authenticated")
@@ -198,7 +198,7 @@ class AOSmithAPI:
                 "profile": {
                     "deviceId": device_id,
                     "productType": "19",
-                    "deviceType": "JSQ31-VJS"
+                    "deviceType": device_type
                 },
                 "service": {
                     "identifier": service_identifier,
@@ -209,22 +209,16 @@ class AOSmithAPI:
 
         headers = await self._generate_headers(payload)
 
-        try:
-            async with self._session.post(
-                f"{API_BASE_URL}/AiLinkService/device/invokeMethod",
-                json=payload, 
-                headers=headers
-            ) as resp:
-                text = await resp.text()
-                if resp.status != 200:
-                    _LOGGER.error("Command HTTP error %s: %s", resp.status, text)
-                    return None
-                data = await resp.json()
-                _LOGGER.debug("Command response: %s", json.dumps(data, ensure_ascii=False))
-                return data
-        except Exception as e:
-            _LOGGER.error("Failed to send command to %s: %s", device_id, e)
-            return None
+        async with self._session.post(
+            f"{API_BASE_URL}/AiLinkService/device/invokeMethod",
+            json=payload,
+            headers=headers,
+        ) as resp:
+            resp.raise_for_status()
+            data = await resp.json()
+            if not isinstance(data, dict) or str(data.get("status")) != "200":
+                raise ValueError(f"Device rejected {service_identifier}: status={data.get('status') if isinstance(data, dict) else 'invalid response'}")
+            return data
 
     async def _generate_headers(self, payload: Dict[str, Any]) -> Dict[str, str]:
         """Generate request headers."""

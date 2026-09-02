@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
@@ -36,7 +36,6 @@ async def async_setup_entry(
 ) -> None:
     """Set up sensors for Ai-Link A.O. Smith devices."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
-    await coordinator.async_config_entry_first_refresh()
 
     cfg = await async_load_translation(hass, config_entry)
 
@@ -113,6 +112,17 @@ class AOSmithSensor(AOSmithEntity, SensorEntity):
         self._group = cfg.get("group", "default")
         if self._value_map and unit is None:
             self._attr_device_class = SensorDeviceClass.ENUM
+            self._attr_options = list(dict.fromkeys(self._value_map.values()))
+        if unit == "°C":
+            self._attr_device_class = SensorDeviceClass.TEMPERATURE
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+        if sensor_key == "waterFlow":
+            self._attr_device_class = SensorDeviceClass.VOLUME_FLOW_RATE
+            self._attr_native_unit_of_measurement = "L/min"
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+        if sensor_key in ("fanSpeed", "fanSpeedFeedback"):
+            self._attr_native_unit_of_measurement = "rpm"
+            self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     def native_value(self):
@@ -122,13 +132,13 @@ class AOSmithSensor(AOSmithEntity, SensorEntity):
         value = output.get(self._sensor_key)
         if value is None:
             return None
-        if self._value_map and str(value) in self._value_map:
-            return self._value_map[str(value)]
+        if self._value_map:
+            return self._value_map.get(str(value))
         if isinstance(value, str):
             val = value.strip()
             if val == "":
                 return None
-            if val.replace(".", "", 1).isdigit():
+            if val.lstrip("-").replace(".", "", 1).isdigit():
                 return float(val) if "." in val else int(val)
         return value
 

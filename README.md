@@ -1,181 +1,64 @@
 # Ai-Link A.O. Smith 热水器集成
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+用于 AI 家智控燃气热水器的 Home Assistant 自定义集成。通过史密斯云端控制设备，支持 HomeKit Bridge。
 
-这是一个 Home Assistant 自定义集成，用于控制和监控 Ai家智控（A.O. Smith）燃气热水器。
+## v1.1.0 功能
 
-## ✨ 主要功能
+| 功能 | Home Assistant | Apple 家庭（通过 HomeKit Bridge） |
+|---|---|---|
+| 设定水温、电源 | 热水器实体 + 温控实体 | 恒温器界面，选择 `climate` 实体 |
+| 实际出水温度、加热状态 | 温控及传感器 | 恒温器当前温度与加热/待机状态 |
+| 零冷水、节能半管零冷水 | 独立开关 | 独立开关 |
+| 增压开关、1/2/3 档 | 三档增压实体 + 开关 | 风扇样式控件，33/67/100% 对应三档 |
+| 零冷水时长 | 1–99 分钟整数输入 | 1/5/10/15/30/60/99 分钟快捷开关 |
+| 风机转速、出水流量 | rpm、L/min 传感器 | Apple 家庭无原生数值显示类型 |
 
-### 🌡️ Water Heater 实体
-- **电源控制**：开启/关闭热水器
-- **温度控制**：设置目标水温（35-70°C）
-- **实时监控**：显示当前水温、运行状态
-- **状态属性**：电源状态、增压状态、巡航状态、节能半管状态
+增压控件控制水泵增压，不控制燃烧风机。时长快捷开关只修改设备时长，不启动循环；当前选中时长显示为开启，点击关闭不清空时长。自定义分钟数在 Home Assistant 设置；不属于预设时所有预设开关关闭。
 
-### 🔘 Switch 开关实体
-- **增压模式**：独立控制水压增压功能
-- **巡航模式**：控制零冷水巡航功能
-- **节能半管模式**：控制节能半管加热功能
+### 范围与状态来源
 
-### 📊 Sensor 传感器实体
+根据官方 GasWater 控制页面及 JSQ31-VJS 抓包核对：
 
-#### 温度传感器
-- 当前温度
-- 进水温度
-- 出水温度
-- 热水温度
+- `waterTemp` 是**设定温度**；`outWaterTemp` 是**实际出水温度**。
+- 支持最低 35°C 的设备范围为 35–70°C；`minTemp35=0` 时最低 37°C。
+- 普通设备步进 1°C。支持半度的设备在 50°C 以下步进 0.5°C，50°C 及以上为整数。
+- 按官方 App 逻辑，在使用热水时禁止继续调高到 50°C 以上。
+- 零冷水时长 1–99 分钟，不是累计运行时间。设备自身负责零冷水运行逻辑。
+- 增压仅 1、2、3 档。
+- 待机时可能有设定温度但未燃烧，界面根据 `heating` 回报显示实际加热状态。
 
-#### 水量传感器
-- 瞬时流量（L/分钟）
-- 总用水量（升）
-- 水硬度
+### 本次修复
 
-#### 燃烧参数
-- 点火次数
-- 总用气量
-- 巡航总用气量
-- 总燃烧时间
-- 燃气压力
-- CO浓度
-- 燃烧比例
+- 修正电源命令为 `SetDeviceOnOff`。
+- 修正零冷水时长命令为 `WaterCruiseTimer`，参数名同名。
+- 增压开关使用 `PressurizeOnOff` / `pressurize`，档位使用 `SetPressurizeLevel` / `pressurizeLevel`。
+- 详细设备状态优先于可能过时的首页快照，避免控制后读回旧状态。
+- HTTP/业务错误不再当作成功；命令串行执行，并等待设备状态回报确认。未确认会向调用方报错。
+- 未知、离线状态不再伪装成默认温度或关闭。
+- 出水温度传感器增加 HomeKit 所需的温度设备类别。
 
-#### 设备状态
-- 设备状态（运行/关机）
-- 供电状态（通电/断电）
-- 错误代码
-- 固件版本代码
+## 安装与更新
 
-#### 零冷水功能 ✨
-- **零冷水运行时长**：累计运行时间（分钟）
-- **零冷水循环次数**：累计循环次数
+在 HACS 自定义仓库中添加 `https://github.com/mopocv/Ai-Link_A.O.Smith`，类别选 Integration，安装后重启 Home Assistant。也可以将 `custom_components/ailink_aosmith` 复制到 HA 的 `custom_components` 目录后重启。
 
-#### 其他传感器
-- 风扇转速
-- 风扇电流
-- 水泵运行频率
-- 水泵运行电流
-- 循环防冻次数
+在“设置 → 设备与服务 → 添加集成”搜索 Ai-Link A.O. Smith，填写从 AI 家智控抓包获取的 `access_token`、`user_id`、`family_id`，可选 Cookie 与手机号。令牌可带或不带 `Bearer ` 前缀。令牌过期后需更新认证信息。
 
-## 📦 安装
+默认每 60 秒轮询，可在集成选项中调整。控制操作会另外主动查询状态确认。
 
-### 通过 HACS 安装（推荐）
+## HomeKit 配置
 
-1. 在 HACS 中点击右上角的三个点
-2. 选择「自定义仓库」
-3. 添加仓库地址：`https://github.com/mopocv/Ai-Link_A.O.Smith`
-4. 类别选择「Integration」
-5. 在 HACS 中搜索「Ai-Link A.O. Smith」并安装
-6. 重启 Home Assistant
+在 HomeKit Bridge 中选择：热水器**温控**、零冷水、节能半管、三档增压、实际出水温度，以及需要的时长预设。温控与原有 `water_heater` 只选一个，避免重复配件；三档增压包含开关，也可另外保留增压开关。
 
-### 手动安装
+HomeKit 本身没有普通 `number` 实体；这里提供具有真实分钟名称的快捷开关。高级用法可以把零冷水 switch 配置为 `valve`，用单位为秒的 `input_number` 通过 `linked_valve_duration` 关联时长，并配置自动化与原始分钟实体双向同步；不同 HomeKit 客户端对阀门时长的编辑支持不同，不能保证 Apple 家庭会展示所有自定义数值设置。
 
-1. 下载此仓库
-2. 将 `custom_components/ailink_aosmith` 文件夹复制到 Home Assistant 的 `custom_components` 目录
-3. 重启 Home Assistant
+风机 rpm、流量 L/min 和任意文字状态不能通过标准 HomeKit Bridge 原样展示在 Apple 家庭中，请使用 Home Assistant 仪表盘查看。不要将其伪装成湿度、照度等错误类型。
 
-## ⚙️ 配置
+容器部署建议使用 host 网络，确保 mDNS 与 HomeKit 端口可被同一局域网访问。首次配对需在已登录目标 Apple 账号的 iPhone“家庭 → 添加配件”中扫描 HA 提供的二维码。
 
-### 获取认证参数
+参考：[HomeKit Bridge 官方文档](https://www.home-assistant.io/integrations/homekit/)。协议核对来源：官方 AI 家智控 [GasWater 网页入口](https://ailink-appservice-h5-prd.hotwater.com.cn/dist/index.html#/GasWater)，核对日期 2026-09-02。
 
-由于 Ai家智控未提供公开的 API，您需要通过抓包获取以下参数：
+## 验证
 
-**必需参数：**
-- `access_token`：访问令牌（格式：Bearer xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx）
-- `user_id`：用户ID
-- `family_id`：家庭ID
+`python -m unittest discover -s tests -v`：协议范围、非法输入、旧快照优先级和热水使用限制。安装 Home Assistant 后还会运行控制确认、错误传播、温控状态及三档映射测试；没有 HA 时这些运行时测试标记为跳过。
 
-**可选参数：**
-- `cookie`：Cookie 信息（格式：cna=xxxxxxx）
-- `mobile`：手机号
-
-### 抓包方法
-
-1. 在手机上安装抓包工具（如 Charles、Fiddler、HttpCanary 等）
-2. 配置手机网络代理，使流量经过抓包工具
-3. 打开「AI家智控」App 并登录
-4. 在抓包记录中查找对 `ailink-api.hotwater.com.cn` 的请求
-5. 从请求头（Headers）中提取以上参数
-
-### 添加集成
-
-1. 在 Home Assistant 中进入「配置」→「设备与服务」
-2. 点击右下角的「+ 添加集成」
-3. 搜索「Ai-Link A.O. Smith」
-4. 填入获取的认证参数
-5. 提交后集成将自动发现您的热水器设备
-
-## 🎯 使用示例
-
-### 自动化示例
-
-#### 定时开启零冷水巡航
-```yaml
-alias: 早晨开启零冷水
-description: 每天早上6点开启零冷水巡航模式
-trigger:
-  - platform: time
-    at: "06:00:00"
-action:
-  - service: switch.turn_on
-    target:
-      entity_id: switch.water_heater_cruise
-mode: single
-```
-
-#### 温度过高告警
-```yaml
-alias: 热水器温度告警
-description: 当水温超过65度时发送通知
-trigger:
-  - platform: numeric_state
-    entity_id: sensor.water_heater_watertemp
-    above: 65
-action:
-  - service: notify.mobile_app
-    data:
-      message: "热水器温度过高！当前：{{ states('sensor.water_heater_watertemp') }}°C"
-mode: single
-```
-
-## 🔄 更新日志
-
-### v1.0.3
-- ✨ **新增零冷水运行时长传感器**：实时监控零冷水功能的累计运行时间（分钟）
-- ✨ **新增零冷水循环次数传感器**：记录零冷水循环的累计次数
-- 📈 帮助用户更好地了解和优化零冷水功能的使用，合理控制能耗
-
-### v1.0.2
-- 添加开关实体（增压、巡航、节能半管）
-- 完善传感器映射
-- 优化状态更新逻辑
-- 添加翻译配置
-
-### v1.0.0
-- 初始版本发布
-- 支持基本的热水器控制和监控功能
-
-## ❓ 常见问题
-
-**Q: 为什么需要抓包获取参数？**  
-A: Ai家智控未提供公开的开发者 API，因此需要通过抓包获取认证信息。
-
-**Q: 参数会过期吗？**  
-A: access_token 可能会过期，如果设备状态无法更新，请重新抓包获取新的参数。
-
-**Q: 支持哪些设备？**  
-A: 目前支持 A.O. Smith 燃气热水器（设备类别为 19）。
-
-**Q: 数据更新频率是多少？**  
-A: 默认每 60 秒更新一次设备状态。
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 📄 许可证
-
-MIT License
-
-## ⚠️ 免责声明
-
-此项目为第三方集成，与 A.O. Smith 公司无关。使用本集成产生的任何问题，开发者不承担责任。请谨慎使用。
+第三方项目，与 A.O. Smith 官方无隶属关系。许可证见 LICENSE。

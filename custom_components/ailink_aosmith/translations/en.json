@@ -34,56 +34,303 @@
   },
   "entity": {
     "sensor": {
-      "waterTemp": {"name": "Current Temperature", "group": "temperature", "unit": "°C", "icon": "mdi:thermometer"},
-      "inWaterTemp": {"name": "Inlet Temperature", "group": "temperature", "unit": "°C", "icon": "mdi:thermometer"},
-      "outWaterTemp": {"name": "Current Outlet Temperature", "group": "temperature", "unit": "°C", "icon": "mdi:thermometer"},
-      "hotWaterTemp": {"name": "Hot Water Temperature", "group": "temperature", "unit": "°C", "icon": "mdi:thermometer"},
-      "waterFlow": {"name": "Water Flow", "group": "water", "unit": "L/min", "icon": "mdi:water-pump"},
-      "fireTimes": {"name": "Ignition Count", "group": "combustion", "unit": "times", "icon": "mdi:fire"},
-      "totalWaterNum": {"name": "Total Water Used", "group": "water", "unit": "L", "icon": "mdi:water"},
-      "totalGasNum": {"name": "Total Gas Used", "group": "combustion", "unit": "m³", "icon": "mdi:fire"},
-      "cruisingTotalGasNum": {"name": "Cruising Total Gas", "group": "combustion", "unit": "m³", "icon": "mdi:counter"},
-      "secAllBuringTime": {"name": "Total Burning Time", "group": "combustion", "unit": "seconds", "icon": "mdi:timer"},
-      "secAllFireNum": {"name": "Total Burn Count", "group": "combustion", "unit": "times", "icon": "mdi:counter"},
-      "secPumpOperatingFre": {"name": "Pump Operating Frequency", "group": "pump_valve", "unit": "RPM", "icon": "mdi:speedometer"},
-      "gasPressure": {"name": "Gas Pressure", "group": "combustion", "unit": "kPa", "icon": "mdi:gauge"},
-      "waterHardness": {"name": "Water Hardness", "group": "water_quality", "unit": "mg/L", "icon": "mdi:potable-water"},
-      "fanSpeed": {"name": "Fan Speed", "group": "fan", "unit": "RPM", "icon": "mdi:fan"},
-      "fanSpeedFeedback": {"name": "Fan Feedback Speed", "group": "fan", "unit": "RPM", "icon": "mdi:fan"},
-      "fanCurrent": {"name": "Fan Current", "group": "fan", "unit": "A", "icon": "mdi:current-ac"},
-      "coConcentration": {"name": "CO Concentration", "group": "combustion", "unit": "ppm", "icon": "mdi:molecule-co"},
-      "cOConcentration": {"name": "CO Concentration", "group": "combustion", "unit": "ppm", "icon": "mdi:molecule-co"},
-      "deviceStatus": {"name": "Device Status", "group": "fault", "unit": "", "icon": "mdi:information", "value_map": {"1": "Running", "0": "Off"}},
-      "workStatus": {"name": "Work Status", "group": "fault", "unit": "", "icon": "mdi:information", "value_map": {"1": "Running", "0": "Stopped"}},
-      "heating": {"name": "Heating Status", "group": "combustion", "unit": "", "icon": "mdi:fire", "value_map": {"1": "Heating", "0": "Idle"}},
-      "powerStatus": {"name": "Power Status", "group": "fault", "unit": "", "icon": "mdi:power-plug", "value_map": {"1": "Powered", "0": "Off"}},
-      "errorCode": {"name": "Error Code", "group": "fault", "unit": "", "icon": "mdi:alert"},
-      "secRpmTimeA": {"name": "Aux RPM Time A", "group": "pump_valve", "unit": "seconds", "icon": "mdi:timer"},
-      "secRpmTimeB": {"name": "Aux RPM Time B", "group": "pump_valve", "unit": "seconds", "icon": "mdi:timer"},
-      "secRpmTimeC": {"name": "Aux RPM Time C", "group": "pump_valve", "unit": "seconds", "icon": "mdi:timer"},
-      "secRpmTimeD": {"name": "Aux RPM Time D", "group": "pump_valve", "unit": "seconds", "icon": "mdi:timer"},
-      "secDutyProportion": {"name": "Burning Ratio", "group": "combustion", "unit": "%", "icon": "mdi:gauge"},
-      "secAdjustMaxCurrent": {"name": "Pump Max Current", "group": "electrical", "unit": "A", "icon": "mdi:current-ac"},
-      "secAdjustMinCurrent": {"name": "Pump Min Current", "group": "electrical", "unit": "A", "icon": "mdi:current-ac"},
-      "secLitre": {"name": "Pump Total Liters", "group": "pump_valve", "unit": "L", "icon": "mdi:water"},
-      "currFireWorkTime": {"name": "Current Fire Work Time", "group": "combustion", "unit": "seconds", "icon": "mdi:timer"},
-      "secPumpRunningCurrent": {"name": "Pump Running Current", "group": "electrical", "unit": "A", "icon": "mdi:current-ac"},
-      "secAllCirAntifreeNum": {"name": "Circulation Anti-Freeze Count", "group": "water", "unit": "times", "icon": "mdi:counter"},
-      "secAllFirCirAntifreeNum": {"name": "Fire Circulation Anti-Freeze Count", "group": "combustion", "unit": "times", "icon": "mdi:counter"},
-      "secWindPressureZeroValue": {"name": "Wind Pressure Zero Value", "group": "fan", "unit": "", "icon": "mdi:gauge"},
-      "secAntiWindPressNum": {"name": "Anti Wind Press Count", "group": "fan", "unit": "times", "icon": "mdi:counter"},
-      "secVersionCode": {"name": "Firmware Version Code", "group": "fault", "unit": "", "icon": "mdi:information"},
-      "cruiseStatus": {"name": "Cruise Status", "group": "mode", "unit": "", "icon": "mdi:water-sync", "value_map": {"1": "On", "0": "Off"}},
-      "pressurizeStatus": {"name": "Pressurize Status", "group": "mode", "unit": "", "icon": "mdi:water-pump", "value_map": {"1": "On", "0": "Off"}},
-      "halfPipeStatus": {"name": "Half Pipe Status", "group": "mode", "unit": "", "icon": "mdi:pipe", "value_map": {"1": "On", "0": "Off"}},
-      "halfPipeCirclelStatus": {"name": "Eco Zero Cold Water Status", "group": "mode", "unit": "", "icon": "mdi:pipe", "value_map": {"1": "On", "0": "Off"}}
+      "waterTemp": {
+        "name": "Target temperature",
+        "group": "temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer"
+      },
+      "inWaterTemp": {
+        "name": "Inlet Temperature",
+        "group": "temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer"
+      },
+      "outWaterTemp": {
+        "name": "Current Outlet Temperature",
+        "group": "temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer"
+      },
+      "hotWaterTemp": {
+        "name": "Hot Water Temperature",
+        "group": "temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer"
+      },
+      "waterFlow": {
+        "name": "Water Flow",
+        "group": "water",
+        "unit": "L/min",
+        "icon": "mdi:water-pump"
+      },
+      "fireTimes": {
+        "name": "Ignition Count",
+        "group": "combustion",
+        "unit": "times",
+        "icon": "mdi:fire"
+      },
+      "totalWaterNum": {
+        "name": "Total Water Used",
+        "group": "water",
+        "unit": "L",
+        "icon": "mdi:water"
+      },
+      "totalGasNum": {
+        "name": "Total Gas Used",
+        "group": "combustion",
+        "unit": "m³",
+        "icon": "mdi:fire"
+      },
+      "cruisingTotalGasNum": {
+        "name": "Cruising Total Gas",
+        "group": "combustion",
+        "unit": "m³",
+        "icon": "mdi:counter"
+      },
+      "secAllBuringTime": {
+        "name": "Total Burning Time",
+        "group": "combustion",
+        "unit": "seconds",
+        "icon": "mdi:timer"
+      },
+      "secAllFireNum": {
+        "name": "Total Burn Count",
+        "group": "combustion",
+        "unit": "times",
+        "icon": "mdi:counter"
+      },
+      "secPumpOperatingFre": {
+        "name": "Pump Operating Frequency",
+        "group": "pump_valve",
+        "unit": "RPM",
+        "icon": "mdi:speedometer"
+      },
+      "gasPressure": {
+        "name": "Gas Pressure",
+        "group": "combustion",
+        "unit": "kPa",
+        "icon": "mdi:gauge"
+      },
+      "waterHardness": {
+        "name": "Water Hardness",
+        "group": "water_quality",
+        "unit": "mg/L",
+        "icon": "mdi:potable-water"
+      },
+      "fanSpeed": {
+        "name": "Fan Speed",
+        "group": "fan",
+        "unit": "rpm",
+        "icon": "mdi:fan"
+      },
+      "fanSpeedFeedback": {
+        "name": "Fan Feedback Speed",
+        "group": "fan",
+        "unit": "rpm",
+        "icon": "mdi:fan"
+      },
+      "fanCurrent": {
+        "name": "Fan Current",
+        "group": "fan",
+        "unit": "A",
+        "icon": "mdi:current-ac"
+      },
+      "coConcentration": {
+        "name": "CO Concentration",
+        "group": "combustion",
+        "unit": "ppm",
+        "icon": "mdi:molecule-co"
+      },
+      "cOConcentration": {
+        "name": "CO Concentration",
+        "group": "combustion",
+        "unit": "ppm",
+        "icon": "mdi:molecule-co"
+      },
+      "deviceStatus": {
+        "name": "Device Status",
+        "group": "fault",
+        "unit": "",
+        "icon": "mdi:information",
+        "value_map": {
+          "1": "Running",
+          "0": "Off"
+        }
+      },
+      "workStatus": {
+        "name": "Work Status",
+        "group": "fault",
+        "unit": "",
+        "icon": "mdi:information",
+        "value_map": {
+          "1": "Running",
+          "0": "Stopped"
+        }
+      },
+      "heating": {
+        "name": "Heating Status",
+        "group": "combustion",
+        "unit": "",
+        "icon": "mdi:fire",
+        "value_map": {
+          "1": "Heating",
+          "0": "Idle"
+        }
+      },
+      "powerStatus": {
+        "name": "Power Status",
+        "group": "fault",
+        "unit": "",
+        "icon": "mdi:power-plug",
+        "value_map": {
+          "1": "Powered",
+          "0": "Off"
+        }
+      },
+      "errorCode": {
+        "name": "Error Code",
+        "group": "fault",
+        "unit": "",
+        "icon": "mdi:alert"
+      },
+      "secRpmTimeA": {
+        "name": "Aux RPM Time A",
+        "group": "pump_valve",
+        "unit": "seconds",
+        "icon": "mdi:timer"
+      },
+      "secRpmTimeB": {
+        "name": "Aux RPM Time B",
+        "group": "pump_valve",
+        "unit": "seconds",
+        "icon": "mdi:timer"
+      },
+      "secRpmTimeC": {
+        "name": "Aux RPM Time C",
+        "group": "pump_valve",
+        "unit": "seconds",
+        "icon": "mdi:timer"
+      },
+      "secRpmTimeD": {
+        "name": "Aux RPM Time D",
+        "group": "pump_valve",
+        "unit": "seconds",
+        "icon": "mdi:timer"
+      },
+      "secDutyProportion": {
+        "name": "Burning Ratio",
+        "group": "combustion",
+        "unit": "%",
+        "icon": "mdi:gauge"
+      },
+      "secAdjustMaxCurrent": {
+        "name": "Pump Max Current",
+        "group": "electrical",
+        "unit": "A",
+        "icon": "mdi:current-ac"
+      },
+      "secAdjustMinCurrent": {
+        "name": "Pump Min Current",
+        "group": "electrical",
+        "unit": "A",
+        "icon": "mdi:current-ac"
+      },
+      "secLitre": {
+        "name": "Pump Total Liters",
+        "group": "pump_valve",
+        "unit": "L",
+        "icon": "mdi:water"
+      },
+      "currFireWorkTime": {
+        "name": "Current Fire Work Time",
+        "group": "combustion",
+        "unit": "seconds",
+        "icon": "mdi:timer"
+      },
+      "secPumpRunningCurrent": {
+        "name": "Pump Running Current",
+        "group": "electrical",
+        "unit": "A",
+        "icon": "mdi:current-ac"
+      },
+      "secAllCirAntifreeNum": {
+        "name": "Circulation Anti-Freeze Count",
+        "group": "water",
+        "unit": "times",
+        "icon": "mdi:counter"
+      },
+      "secAllFirCirAntifreeNum": {
+        "name": "Fire Circulation Anti-Freeze Count",
+        "group": "combustion",
+        "unit": "times",
+        "icon": "mdi:counter"
+      },
+      "secWindPressureZeroValue": {
+        "name": "Wind Pressure Zero Value",
+        "group": "fan",
+        "unit": "",
+        "icon": "mdi:gauge"
+      },
+      "secAntiWindPressNum": {
+        "name": "Anti Wind Press Count",
+        "group": "fan",
+        "unit": "times",
+        "icon": "mdi:counter"
+      },
+      "secVersionCode": {
+        "name": "Firmware Version Code",
+        "group": "fault",
+        "unit": "",
+        "icon": "mdi:information"
+      },
+      "cruiseStatus": {
+        "name": "Cruise Status",
+        "group": "mode",
+        "unit": "",
+        "icon": "mdi:water-sync",
+        "value_map": {
+          "1": "On",
+          "0": "Off"
+        }
+      },
+      "pressurizeStatus": {
+        "name": "Pressurize Status",
+        "group": "mode",
+        "unit": "",
+        "icon": "mdi:water-pump",
+        "value_map": {
+          "1": "On",
+          "0": "Off"
+        }
+      },
+      "halfPipeStatus": {
+        "name": "Half Pipe Status",
+        "group": "mode",
+        "unit": "",
+        "icon": "mdi:pipe",
+        "value_map": {
+          "1": "On",
+          "0": "Off"
+        }
+      },
+      "halfPipeCirclelStatus": {
+        "name": "Eco Zero Cold Water Status",
+        "group": "mode",
+        "unit": "",
+        "icon": "mdi:pipe",
+        "value_map": {
+          "1": "On",
+          "0": "Off"
+        }
+      }
     },
     "water_heater": {
       "default_name": "Ai-Link A.O. Smith Water Heater",
       "operation_mode": {
-        "off": "Off", 
+        "off": "Off",
         "gas": "Gas Heating",
-        "cruise": "Zero Cold Water", 
+        "cruise": "Zero Cold Water",
         "half_pipe": "Eco Zero Cold Water"
       }
     },

@@ -1,247 +1,73 @@
-"""Support for A.O. Smith water heaters with independent state controls."""
-from __future__ import annotations
-
-import logging
-from typing import Any
-
-from homeassistant.components.water_heater import (
-    STATE_GAS,
-    WaterHeaterEntity,
-    WaterHeaterEntityFeature,
-)
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-
-from .const import DOMAIN, WATER_HEATER_MIN_TEMP, WATER_HEATER_MAX_TEMP, WATER_HEATER_DEFAULT_TEMP, DEVICE_CATEGORY_WATER_HEATER
+"""Native water heater entity, sharing validated controls with the thermostat."""
+from homeassistant.components.water_heater import WaterHeaterEntity, WaterHeaterEntityFeature, STATE_GAS
+from homeassistant.const import ATTR_TEMPERATURE, STATE_OFF, UnitOfTemperature
+from .const import DOMAIN, DEVICE_CATEGORY_WATER_HEATER
 from .entity import AOSmithEntity
+from .protocol import numeric, flag, temperature_limits
 
-_LOGGER = logging.getLogger(__name__)
 
-
-async def async_setup_entry(
-    hass: HomeAssistant,
-    config_entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up A.O. Smith water heater entities from config entry."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
-
-    entities = []
-    for device_id, device_data in coordinator.data.items():
-        if str(device_data.get("deviceCategory")) == DEVICE_CATEGORY_WATER_HEATER:
-            entities.append(AOSmithWaterHeater(coordinator, device_id))
-
-    _LOGGER.info("Setting up %d water heater entities", len(entities))
-    async_add_entities(entities)
+async def async_setup_entry(hass, entry, async_add_entities):
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    async_add_entities(AOSmithWaterHeater(coordinator, key) for key, data in coordinator.data.items()
+                       if str(data.get("deviceCategory")) == DEVICE_CATEGORY_WATER_HEATER)
 
 
 class AOSmithWaterHeater(AOSmithEntity, WaterHeaterEntity):
-    """A.O. Smith water heater with independent state controls."""
-
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_supported_features = (WaterHeaterEntityFeature.TARGET_TEMPERATURE
+                               | WaterHeaterEntityFeature.ON_OFF | WaterHeaterEntityFeature.OPERATION_MODE)
+    _attr_operation_list = [STATE_OFF, STATE_GAS]
+    _attr_precision = 1.0
 
-    def __init__(self, coordinator, device_id: str):
-        """Initialize the water heater."""
+    def __init__(self, coordinator, device_id):
         super().__init__(coordinator, device_id)
         self._attr_name = self.device_data.get("productName", "A.O. Smith Water Heater")
         self._attr_unique_id = f"{device_id}_water_heater"
-        self._attr_supported_features = (
-            WaterHeaterEntityFeature.TARGET_TEMPERATURE
-            | WaterHeaterEntityFeature.ON_OFF
-            | WaterHeaterEntityFeature.OPERATION_MODE
-        )
-        self._attr_operation_list = [STATE_GAS]
-        self._attr_precision = 1.0
-        
-        # Initialize state variables
-        self._power_state = False
-        self._cruise_state = False
-        self._half_pipe_state = False
-        self._pressurize_state = False
-
-    def _update_states_from_data(self):
-        """Update internal states from device data."""
-        output_data = self._get_output_data()
-        if not output_data:
-            return
-
-        power_status = output_data.get("powerStatus")
-        if power_status is None:
-            power_status = output_data.get("powerOn")
-        self._power_state = str(power_status) == "1"
-
-        cruise_status = output_data.get("cruiseStatus")
-        self._cruise_state = str(cruise_status) == "1"
-
-        half_pipe_status = output_data.get("halfPipeStatus")
-        if half_pipe_status is None:
-            half_pipe_status = output_data.get("setHalfPipeCircle")
-        if half_pipe_status is None:
-            half_pipe_status = output_data.get("halfPipeCircle")
-        if half_pipe_status is None:
-            half_pipe_status = output_data.get("halfPipeCirclelStatus")
-        self._half_pipe_state = str(half_pipe_status) == "1"
-
-        pressurize_status = output_data.get("pressurizeStatus")
-        if pressurize_status is None:
-            pressurize_status = output_data.get("pressurize")
-        self._pressurize_state = str(pressurize_status) == "1"
 
     @property
-    def current_operation(self) -> str:
-        """Return current operation mode."""
-        self._update_states_from_data()
-        return STATE_GAS
+    def current_operation(self):
+        value = flag(self._get_output_data(), "powerStatus", "powerOn")
+        return None if value is None else STATE_GAS if value else STATE_OFF
 
     @property
-    def operation_list(self) -> list[str]:
-        """Return the supported operation modes."""
-        return self._attr_operation_list
+    def is_on(self):
+        return flag(self._get_output_data(), "powerStatus", "powerOn")
 
     @property
-    def _active_modes(self) -> list[str]:
-        """Return active optional modes for attributes."""
-        modes = []
-        if self._cruise_state:
-            modes.append("零冷水")
-        if self._half_pipe_state:
-            modes.append("节能零冷水")
-        if self._pressurize_state:
-            modes.append("增压")
-        return modes
+    def current_temperature(self):
+        return numeric(self._get_output_data(), "outWaterTemp")
 
     @property
-    def current_temperature(self) -> float | None:
-        """Return current water temperature."""
-        output_data = self._get_output_data()
-        if not output_data:
-            return None
-        val = output_data.get("waterTemp")
-        if val is not None:
-            try:
-                return float(val)
-            except (TypeError, ValueError):
-                return None
-        return None
+    def target_temperature(self):
+        return numeric(self._get_output_data(), "waterTemp", "setTemp")
 
     @property
-    def target_temperature(self) -> float | None:
-        """Return the target temperature."""
-        # Try to get from device data first
-        target_temp = self.device_data.get("target_temperature")
-        if target_temp is not None:
-            return float(target_temp)
-        
-        # Fall back to current temperature or default
-        current_temp = self.current_temperature
-        if current_temp is not None:
-            return current_temp
-            
-        return WATER_HEATER_DEFAULT_TEMP
+    def min_temp(self):
+        return temperature_limits(self._get_output_data())[0]
 
     @property
-    def min_temp(self) -> float:
-        return WATER_HEATER_MIN_TEMP
+    def max_temp(self):
+        return temperature_limits(self._get_output_data())[1]
 
-    @property
-    def max_temp(self) -> float:
-        return WATER_HEATER_MAX_TEMP
+    async def async_set_temperature(self, **kwargs):
+        value = kwargs[ATTR_TEMPERATURE]
+        await self.coordinator.async_command(self.device_id, "temperature", {"temperature": value}, {"waterTemp": value})
 
-    async def async_set_temperature(self, **kwargs: Any) -> None:
-        """Set target temperature."""
-        temperature = kwargs.get(ATTR_TEMPERATURE)
-        if temperature is not None:
-            _LOGGER.info("Setting temperature for %s to %s°C", self.device_id, temperature)
-            
-            # Update local state immediately for responsiveness
-            self.device_data["target_temperature"] = temperature
-            self.async_write_ha_state()
-            
-            # Send command to device
-            try:
-                await self.coordinator.api.async_send_command(
-                    self.device_id, 
-                    "WaterTempSet", 
-                    {"waterTemp": str(int(temperature))}
-                )
-                _LOGGER.info("Temperature set command sent successfully for %s", self.device_id)
-            except Exception as e:
-                _LOGGER.error("Failed to set temperature for %s: %s", self.device_id, e)
-                # Revert local state on error
-                self.device_data.pop("target_temperature", None)
-                self.async_write_ha_state()
+    async def async_turn_on(self, **kwargs):
+        await self.coordinator.async_command(self.device_id, "SetDeviceOnOff", {"powerStatus": "1"}, {"powerStatus": 1})
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the water heater on."""
-        _LOGGER.info("Turning on water heater %s", self.device_id)
-        try:
-            await self.coordinator.api.async_send_command(
-                self.device_id, 
-                "PowerOnOff", 
-                {"powerStatus": "1"}
-            )
-            self._power_state = True
-            self.async_write_ha_state()
-            _LOGGER.info("Water heater %s turned on", self.device_id)
-        except Exception as e:
-            _LOGGER.error("Failed to turn on water heater %s: %s", self.device_id, e)
+    async def async_turn_off(self, **kwargs):
+        await self.coordinator.async_command(self.device_id, "SetDeviceOnOff", {"powerStatus": "0"}, {"powerStatus": 0})
 
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        """Turn the water heater off."""
-        _LOGGER.info("Turning off water heater %s", self.device_id)
-        try:
-            await self.coordinator.api.async_send_command(
-                self.device_id, 
-                "PowerOnOff", 
-                {"powerStatus": "0"}
-            )
-            self._power_state = False
-            self.async_write_ha_state()
-            _LOGGER.info("Water heater %s turned off", self.device_id)
-        except Exception as e:
-            _LOGGER.error("Failed to turn off water heater %s: %s", self.device_id, e)
-
-    async def async_set_operation_mode(self, operation_mode: str) -> None:
-        """Set operation mode."""
+    async def async_set_operation_mode(self, operation_mode):
         if operation_mode == STATE_GAS:
             await self.async_turn_on()
+        elif operation_mode == STATE_OFF:
+            await self.async_turn_off()
         else:
-            _LOGGER.warning(
-                "Unsupported operation mode %s for water heater %s",
-                operation_mode,
-                self.device_id,
-            )
+            raise ValueError(f"Unsupported operation mode: {operation_mode}")
 
     @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return extra state attributes."""
-        self._update_states_from_data()
-
-        attrs = {
-            "device_id": self.device_id,
-            "power_state": "on" if self._power_state else "off",
-            "active_modes": self._active_modes,
-            "cruise_state": "on" if self._cruise_state else "off",
-            "half_pipe_state": "on" if self._half_pipe_state else "off",
-            "pressurize_state": "on" if self._pressurize_state else "off",
-        }
-        
-        output_data = self._get_output_data()
-        if output_data:
-            for key in [
-                "waterFlow",
-                "inWaterTemp",
-                "outWaterTemp",
-                "fireWorkTime",
-                "totalWaterNum",
-                "errorCode",
-                "powerStatus",
-                "deviceStatus",
-                "pressurizeStatus",
-            ]:
-                if key in output_data:
-                    attrs[key] = output_data[key]
-                
-        return attrs
+    def extra_state_attributes(self):
+        output = self._get_output_data()
+        return {key: output[key] for key in ("waterFlow", "fanSpeed", "outWaterTemp", "heating", "powerStatus", "cruiseStatus", "halfPipeCirclelStatus", "pressurize", "pressurizeLevel", "curiesTime") if key in output}

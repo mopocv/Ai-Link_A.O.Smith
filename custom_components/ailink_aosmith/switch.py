@@ -1,205 +1,64 @@
-"""Support for A.O. Smith independent state switches."""
-from __future__ import annotations
-
-import logging
-from typing import Any
-
+"""Device modes and HomeKit-compatible duration preset switches."""
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-
 from .const import DOMAIN, DEVICE_CATEGORY_WATER_HEATER
 from .entity import AOSmithEntity
+from .protocol import flag, numeric, DURATION_PRESETS
 
-_LOGGER = logging.getLogger(__name__)
+# key, display name, command, input field, reported field
+MODES = (
+    ("cruise", "零冷水", "WaterCruiseOnOff", "cruiseStatus", "cruiseStatus"),
+    ("half_pipe", "节能半管零冷水", "setHalfPipeCircle", "setHalfPipeCircle", "halfPipeCirclelStatus"),
+    ("pressurize", "增压", "PressurizeOnOff", "pressurize", "pressurize"),
+)
 
 
-async def async_setup_entry(
-    hass: HomeAssistant,
-    config_entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up A.O. Smith switch entities from config entry."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
-
+async def async_setup_entry(hass, entry, async_add_entities):
+    coordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
-    for device_id, device_data in coordinator.data.items():
-        if str(device_data.get("deviceCategory")) == DEVICE_CATEGORY_WATER_HEATER:
-            # Add individual state switches
-            entities.extend([
-                AOSmithCruiseSwitch(coordinator, device_id),
-                AOSmithHalfPipeSwitch(coordinator, device_id),
-                AOSmithPressurizeSwitch(coordinator, device_id),
-            ])
-
-    _LOGGER.info("Setting up %d switch entities", len(entities))
-    async_add_entities(entities, True)
+    for key, data in coordinator.data.items():
+        if str(data.get("deviceCategory")) == DEVICE_CATEGORY_WATER_HEATER:
+            entities.extend(AOSmithModeSwitch(coordinator, key, mode) for mode in MODES)
+            entities.extend(AOSmithDurationPreset(coordinator, key, minutes) for minutes in DURATION_PRESETS)
+    async_add_entities(entities)
 
 
-class AOSmithBaseSwitch(AOSmithEntity, SwitchEntity):
-    """Base class for A.O. Smith state switches."""
-    
-    def __init__(self, coordinator, device_id: str, switch_key: str):
-        """Initialize the switch."""
+class AOSmithModeSwitch(AOSmithEntity, SwitchEntity):
+    def __init__(self, coordinator, device_id, mode):
         super().__init__(coordinator, device_id)
-        self._switch_key = switch_key
-        
-        # 从翻译配置获取名称和图标
-        translation = getattr(coordinator, 'translation', {})
-        _LOGGER.debug("Available translation keys: %s", list(translation.keys()) if translation else "No translation")
-        
-        switch_config = {}
-        if translation:
-            entity_config = translation.get('entity', {})
-            _LOGGER.debug("Entity config keys: %s", list(entity_config.keys()))
-            switch_config = entity_config.get('switch', {}).get(switch_key, {})
-            _LOGGER.debug("Switch config for %s: %s", switch_key, switch_config)
-        
-        device_name = self.device_data.get('productName', 'Water Heater')
-        switch_name = switch_config.get('name', switch_key)
-        
-        self._attr_name = f"{device_name} {switch_name}"
-        self._attr_unique_id = f"{device_id}_{switch_key}"
-        self._attr_icon = switch_config.get('icon')
-        self._is_on = False
-
-    def _update_state_from_data(self):
-        """Update switch state from device data."""
-        output_data = self._get_output_data()
-        if not output_data:
-            return
-        self._is_on = self._get_state_from_output(output_data)
-
-    def _get_state_from_output(self, output_data: dict) -> bool:
-        """Extract switch state from output data - to be implemented by subclasses."""
-        return False
+        key, name, self._command, self._input, self._reported = mode
+        self._attr_name = f"{self.device_data.get('productName', 'Water Heater')} {name}"
+        self._attr_unique_id = f"{device_id}_{key}"
+        self._attr_icon = "mdi:water-pump" if key == "pressurize" else "mdi:water-sync"
 
     @property
-    def is_on(self) -> bool:
-        """Return true if switch is on."""
-        self._update_state_from_data()
-        return self._is_on
+    def is_on(self):
+        return flag(self._get_output_data(), self._reported)
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn on the switch."""
-        _LOGGER.info("Turning on %s for %s", self._switch_key, self._device_id)
-        try:
-            await self._send_turn_on_command()
-            self._is_on = True
-            self.async_write_ha_state()
-            _LOGGER.info("%s turned on for %s", self._switch_key, self._device_id)
-        except Exception as e:
-            _LOGGER.error("Failed to turn on %s for %s: %s", self._switch_key, self._device_id, e)
+    async def async_turn_on(self, **kwargs):
+        await self.coordinator.async_command(self.device_id, self._command, {self._input: "1"}, {self._reported: 1})
 
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        """Turn off the switch."""
-        _LOGGER.info("Turning off %s for %s", self._switch_key, self._device_id)
-        try:
-            await self._send_turn_off_command()
-            self._is_on = False
-            self.async_write_ha_state()
-            _LOGGER.info("%s turned off for %s", self._switch_key, self._device_id)
-        except Exception as e:
-            _LOGGER.error("Failed to turn off %s for %s: %s", self._switch_key, self._device_id, e)
-
-    async def _send_turn_on_command(self):
-        """Send command to turn on the switch - to be implemented by subclasses."""
-        pass
-
-    async def _send_turn_off_command(self):
-        """Send command to turn off the switch - to be implemented by subclasses."""
-        pass
+    async def async_turn_off(self, **kwargs):
+        await self.coordinator.async_command(self.device_id, self._command, {self._input: "0"}, {self._reported: 0})
 
 
-class AOSmithCruiseSwitch(AOSmithBaseSwitch):
-    """Switch for cruise mode (零冷水)."""
-    
-    def __init__(self, coordinator, device_id: str):
-        super().__init__(coordinator, device_id, "cruise")
+class AOSmithDurationPreset(AOSmithEntity, SwitchEntity):
+    """A preset changes duration only; it does not start recirculation."""
+    _attr_icon = "mdi:timer-cog"
 
-    def _get_state_from_output(self, output_data: dict) -> bool:
-        """Get cruise state from output data."""
-        cruise_status = output_data.get("cruiseStatus")
-        return cruise_status == "1"
+    def __init__(self, coordinator, device_id, minutes):
+        super().__init__(coordinator, device_id)
+        self._minutes = minutes
+        self._attr_name = f"零冷水时长 {minutes} 分钟"
+        self._attr_unique_id = f"{device_id}_duration_{minutes}"
 
-    async def _send_turn_on_command(self):
-        """Turn on cruise mode."""
-        await self.coordinator.api.async_send_command(
-            self._device_id, 
-            "WaterCruiseOnOff", 
-            {"cruiseStatus": "1"}
-        )
+    @property
+    def is_on(self):
+        value = numeric(self._get_output_data(), "curiesTime")
+        return None if value is None else value == self._minutes
 
-    async def _send_turn_off_command(self):
-        """Turn off cruise mode."""
-        await self.coordinator.api.async_send_command(
-            self._device_id, 
-            "WaterCruiseOnOff", 
-            {"cruiseStatus": "0"}
-        )
+    async def async_turn_on(self, **kwargs):
+        await self.coordinator.async_command(self.device_id, "WaterCruiseTimer", {"WaterCruiseTimer": str(self._minutes)}, {"curiesTime": self._minutes})
 
-
-class AOSmithHalfPipeSwitch(AOSmithBaseSwitch):
-    """Switch for half pipe mode (节能半管)."""
-    
-    def __init__(self, coordinator, device_id: str):
-        super().__init__(coordinator, device_id, "half_pipe")
-
-    def _get_state_from_output(self, output_data: dict) -> bool:
-        """Get half pipe state from output data."""
-        # 根据实际API字段调整
-        half_pipe_status = output_data.get("halfPipeStatus")
-        if half_pipe_status is None:
-            half_pipe_status = output_data.get("setHalfPipeCircle")
-        if half_pipe_status is None:
-            half_pipe_status = output_data.get("halfPipeCircle")
-        if half_pipe_status is None:
-            half_pipe_status = output_data.get("halfPipeCirclelStatus")
-        return str(half_pipe_status) == "1"
-
-    async def _send_turn_on_command(self):
-        """Turn on half pipe mode."""
-        await self.coordinator.api.async_send_command(
-            self._device_id, 
-            "setHalfPipeCircle", 
-            {"setHalfPipeCircle": "1"}
-        )
-
-    async def _send_turn_off_command(self):
-        """Turn off half pipe mode."""
-        await self.coordinator.api.async_send_command(
-            self._device_id, 
-            "setHalfPipeCircle", 
-            {"setHalfPipeCircle": "0"}
-        )
-
-
-class AOSmithPressurizeSwitch(AOSmithBaseSwitch):
-    """Switch for pressurize mode (增压)."""
-
-    def __init__(self, coordinator, device_id: str):
-        super().__init__(coordinator, device_id, "pressurize")
-
-    def _get_state_from_output(self, output_data: dict) -> bool:
-        """Get pressurize state from output data."""
-        pressurize_status = output_data.get("pressurizeStatus")
-        if pressurize_status is None:
-            pressurize_status = output_data.get("pressurize")
-        return str(pressurize_status) == "1"
-
-    async def _send_turn_on_command(self):
-        """Turn on pressurize mode."""
-        await self.coordinator.api.async_send_command(
-            self._device_id,
-            "PressurizeOnOff",
-            {"pressurizeStatus": "1"},
-        )
-
-    async def _send_turn_off_command(self):
-        """Turn off pressurize mode."""
-        await self.coordinator.api.async_send_command(
-            self._device_id,
-            "PressurizeOnOff",
-            {"pressurizeStatus": "0"},
-        )
+    async def async_turn_off(self, **kwargs):
+        # A duration cannot be unset. Re-publish the actual selected preset.
+        self.async_write_ha_state()

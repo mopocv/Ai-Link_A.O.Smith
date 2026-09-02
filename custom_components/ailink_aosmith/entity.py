@@ -8,35 +8,7 @@ from .const import DOMAIN, BRAND
 _LOGGER = logging.getLogger(__name__)
 
 
-def extract_output_data(device_data: dict) -> dict:
-    """Parse outputData from device status info."""
-    if not device_data:
-        return {}
-    raw = device_data.get("statusInfo")
-    if not raw:
-        app_status = device_data.get("appDeviceStatusInfoEntity")
-        if isinstance(app_status, dict):
-            raw = app_status.get("statusInfo")
-    if not raw:
-        return {}
-    if isinstance(raw, str):
-        try:
-            parsed = json.loads(raw)
-        except json.JSONDecodeError:
-            return {}
-    elif isinstance(raw, dict):
-        parsed = raw
-    else:
-        return {}
-
-    events = parsed.get("events")
-    if isinstance(events, list):
-        for event in events:
-            if event.get("identifier") == "post":
-                output = event.get("outputData")
-                return output if isinstance(output, dict) else {}
-    output = parsed.get("outputData")
-    return output if isinstance(output, dict) else {}
+from .protocol import extract_output_data
 
 class AOSmithEntity(CoordinatorEntity):
     """Base class for A.O. Smith entities."""
@@ -54,7 +26,16 @@ class AOSmithEntity(CoordinatorEntity):
     @property
     def device_data(self):
         """Return the device data from coordinator."""
-        return self.coordinator.data.get(self._device_id, {})
+        return (self.coordinator.data or {}).get(self._device_id, {})
+
+    @property
+    def available(self):
+        return (
+            super().available
+            and str(self.device_data.get("devState", "1")) != "0"
+            and self.device_data.get("_status_available", True)
+            and bool(self._get_output_data())
+        )
 
     @property
     def device_info(self):
@@ -101,7 +82,7 @@ class AOSmithEntity(CoordinatorEntity):
         if not status_info:
             return None
         try:
-            data = json.loads(status_info)
+            data = json.loads(status_info) if isinstance(status_info, str) else status_info
             profile = data.get("profile", {})
             return profile.get("deviceType") or profile.get("deviceModel")
         except (json.JSONDecodeError, KeyError, TypeError) as e:
@@ -114,7 +95,7 @@ class AOSmithEntity(CoordinatorEntity):
         if not status_info:
             return None
         try:
-            data = json.loads(status_info)
+            data = json.loads(status_info) if isinstance(status_info, str) else status_info
             profile = data.get("profile", {})
             firmware_list = profile.get("deviceFirmware", [])
             for firmware in firmware_list:

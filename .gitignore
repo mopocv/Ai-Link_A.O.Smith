@@ -1,2 +1,5 @@
 .DS_Store
-custom_components/ailink_aosmith/__pycache__/water_heater.cpython-314.pyc
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/

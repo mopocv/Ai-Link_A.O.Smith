@@ -7,7 +7,9 @@ from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
+
+from .protocol import extract_output_data, temperature_command, numeric
 
 from .const import (
     CONF_UPDATE_INTERVAL,
@@ -27,6 +29,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     _LOGGER.info("Setting up A.O. Smith integration with user_id: %s", entry.data["user_id"])
     
+    api = None
     try:
         # Initialize API
         api = AOSmithAPI(
@@ -93,6 +96,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return True
         
     except Exception as err:
+        if api is not None:
+            await api.close()
         _LOGGER.error("Error setting up A.O. Smith integration: %s", err, exc_info=True)
         raise ConfigEntryNotReady(f"Failed to setup integration: {err}") from err
 
@@ -113,6 +118,7 @@ class AOSmithDataUpdateCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, api, update_interval: timedelta):
         """Initialize global data updater."""
         self.api = api
+        self._command_lock = asyncio.Lock()
         self.data = {}
         self.translation = {}  # 初始化翻译属性
         
@@ -123,6 +129,40 @@ class AOSmithDataUpdateCoordinator(DataUpdateCoordinator):
             update_interval=update_interval,
         )
     
+    async def async_command(self, device_id, identifier, inputs, expected):
+        """Serialize writes and require a fresh device report to confirm success."""
+        async with self._command_lock:
+            try:
+                status = await self.api.async_get_device_status(device_id)
+                if not status or str(status.get("devState", "1")) == "0":
+                    raise HomeAssistantError("Device status is unavailable")
+                output = extract_output_data(status)
+                if not output:
+                    raise HomeAssistantError("Device status is unavailable")
+                if identifier == "temperature":
+                    value = inputs["temperature"]
+                    identifier, inputs = temperature_command(output, value)
+                model = status.get("productModel") or output.get("deviceModel")
+                if not model:
+                    raise HomeAssistantError("Device model is unavailable")
+                await self.api.async_send_command(device_id, identifier, inputs, device_type=model)
+                for delay in (1, 2, 3, 4):
+                    await asyncio.sleep(delay)
+                    status = await self.api.async_get_device_status(device_id)
+                    if not status:
+                        continue
+                    output = extract_output_data(status)
+                    updated = dict(self.data)
+                    updated[device_id] = {**updated.get(device_id, {}), **status, "_status_available": True}
+                    self.async_set_updated_data(updated)
+                    if all(numeric(output, key) == float(value) for key, value in expected.items()):
+                        return
+                raise HomeAssistantError("Command sent, but the device did not confirm the requested state")
+            except HomeAssistantError:
+                raise
+            except Exception as err:
+                raise HomeAssistantError(f"Device command failed: {err}") from err
+
     async def _async_update_data(self):
         """Fetch data from API."""
         try:
@@ -148,18 +188,18 @@ class AOSmithDataUpdateCoordinator(DataUpdateCoordinator):
                         )
                         if status:
                             # Merge device info with status
-                            merged_data = {**device, **status}
+                            merged_data = {**device, **status, "_status_available": True}
                             data[device_id] = merged_data
                             _LOGGER.debug("Successfully updated status for device %s", device_id)
                         else:
                             # Use basic device info if status fetch failed
-                            data[device_id] = device
+                            data[device_id] = {**device, "_status_available": False}
                             _LOGGER.warning("Failed to get status for device %s, using basic info", device_id)
                     except asyncio.TimeoutError:
-                        data[device_id] = device
+                        data[device_id] = {**device, "_status_available": False}
                         _LOGGER.warning("Timeout getting status for device %s", device_id)
                     except Exception as status_err:
-                        data[device_id] = device
+                        data[device_id] = {**device, "_status_available": False}
                         _LOGGER.warning("Error getting status for device %s: %s", device_id, status_err)
             
             _LOGGER.debug("Updated data for %d devices", len(data))

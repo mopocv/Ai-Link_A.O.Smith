@@ -34,56 +34,303 @@
   },
   "entity": {
     "sensor": {
-      "waterTemp": {"name": "当前温度", "group": "temperature", "unit": "°C", "icon": "mdi:thermometer"},
-      "inWaterTemp": {"name": "进水温度", "group": "temperature", "unit": "°C", "icon": "mdi:thermometer"},
-      "outWaterTemp": {"name": "当前出水温度", "group": "temperature", "unit": "°C", "icon": "mdi:thermometer"},
-      "hotWaterTemp": {"name": "热水温度", "group": "temperature", "unit": "°C", "icon": "mdi:thermometer"},
-      "waterFlow": {"name": "流量", "group": "water", "unit": "L/分钟", "icon": "mdi:water-pump"},
-      "fireTimes": {"name": "点火次数", "group": "combustion", "unit": "次", "icon": "mdi:fire"},
-      "totalWaterNum": {"name": "总用水量", "group": "water", "unit": "升", "icon": "mdi:water"},
-      "totalGasNum": {"name": "总用气量", "group": "combustion", "unit": "立方米", "icon": "mdi:fire"},
-      "cruisingTotalGasNum": {"name": "巡航总用气量", "group": "combustion", "unit": "立方米", "icon": "mdi:counter"},
-      "secAllBuringTime": {"name": "总燃烧时间", "group": "combustion", "unit": "秒", "icon": "mdi:timer"},
-      "secAllFireNum": {"name": "累计点火次数", "group": "combustion", "unit": "次", "icon": "mdi:counter"},
-      "secPumpOperatingFre": {"name": "水泵运行频率", "group": "pump_valve", "unit": "转/分", "icon": "mdi:speedometer"},
-      "gasPressure": {"name": "燃气压力", "group": "combustion", "unit": "千帕", "icon": "mdi:gauge"},
-      "waterHardness": {"name": "水硬度", "group": "water_quality", "unit": "mg/L", "icon": "mdi:potable-water"},
-      "fanSpeed": {"name": "风扇转速", "group": "fan", "unit": "转/分", "icon": "mdi:fan"},
-      "fanSpeedFeedback": {"name": "风扇反馈转速", "group": "fan", "unit": "转/分", "icon": "mdi:fan"},
-      "fanCurrent": {"name": "风扇电流", "group": "fan", "unit": "A", "icon": "mdi:current-ac"},
-      "coConcentration": {"name": "CO浓度", "group": "combustion", "unit": "ppm", "icon": "mdi:molecule-co"},
-      "cOConcentration": {"name": "CO浓度", "group": "combustion", "unit": "ppm", "icon": "mdi:molecule-co"},
-      "deviceStatus": {"name": "设备状态", "group": "fault", "unit": "", "icon": "mdi:information", "value_map": {"1": "运行", "0": "关机"}},
-      "workStatus": {"name": "运行状态", "group": "fault", "unit": "", "icon": "mdi:information", "value_map": {"1": "运行", "0": "停止"}},
-      "heating": {"name": "燃烧加热状态", "group": "combustion", "unit": "", "icon": "mdi:fire", "value_map": {"1": "加热中", "0": "未加热"}},
-      "powerStatus": {"name": "供电状态", "group": "fault", "unit": "", "icon": "mdi:power-plug", "value_map": {"1": "通电", "0": "断电"}},
-      "errorCode": {"name": "错误代码", "group": "fault", "unit": "", "icon": "mdi:alert"},
-      "secRpmTimeA": {"name": "辅助转速时间 A", "group": "pump_valve", "unit": "秒", "icon": "mdi:timer"},
-      "secRpmTimeB": {"name": "辅助转速时间 B", "group": "pump_valve", "unit": "秒", "icon": "mdi:timer"},
-      "secRpmTimeC": {"name": "辅助转速时间 C", "group": "pump_valve", "unit": "秒", "icon": "mdi:timer"},
-      "secRpmTimeD": {"name": "辅助转速时间 D", "group": "pump_valve", "unit": "秒", "icon": "mdi:timer"},
-      "secDutyProportion": {"name": "燃烧比例", "group": "combustion", "unit": "%", "icon": "mdi:gauge"},
-      "secAdjustMaxCurrent": {"name": "水泵最大电流", "group": "electrical", "unit": "A", "icon": "mdi:current-ac"},
-      "secAdjustMinCurrent": {"name": "水泵最小电流", "group": "electrical", "unit": "A", "icon": "mdi:current-ac"},
-      "secLitre": {"name": "水泵累计升数", "group": "pump_valve", "unit": "升", "icon": "mdi:water"},
-      "currFireWorkTime": {"name": "当前点火时间", "group": "combustion", "unit": "秒", "icon": "mdi:timer"},
-      "secPumpRunningCurrent": {"name": "水泵运行电流", "group": "electrical", "unit": "A", "icon": "mdi:current-ac"},
-      "secAllCirAntifreeNum": {"name": "循环防冻次数", "group": "water", "unit": "次", "icon": "mdi:counter"},
-      "secAllFirCirAntifreeNum": {"name": "点火循环防冻次数", "group": "combustion", "unit": "次", "icon": "mdi:counter"},
-      "secWindPressureZeroValue": {"name": "风压零点值", "group": "fan", "unit": "", "icon": "mdi:gauge"},
-      "secAntiWindPressNum": {"name": "防回风次数", "group": "fan", "unit": "次", "icon": "mdi:counter"},
-      "secVersionCode": {"name": "固件版本代码", "group": "fault", "unit": "", "icon": "mdi:information"},
-      "cruiseStatus": {"name": "巡航状态", "group": "mode", "unit": "", "icon": "mdi:water-sync", "value_map": {"1": "开启", "0": "关闭"}},
-      "pressurizeStatus": {"name": "增压状态", "group": "mode", "unit": "", "icon": "mdi:water-pump", "value_map": {"1": "开启", "0": "关闭"}},
-      "halfPipeStatus": {"name": "节能半管状态", "group": "mode", "unit": "", "icon": "mdi:pipe", "value_map": {"1": "开启", "0": "关闭"}},
-      "halfPipeCirclelStatus": {"name": "节能零冷水状态", "group": "mode", "unit": "", "icon": "mdi:pipe", "value_map": {"1": "开启", "0": "关闭"}}
+      "waterTemp": {
+        "name": "设定温度",
+        "group": "temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer"
+      },
+      "inWaterTemp": {
+        "name": "进水温度",
+        "group": "temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer"
+      },
+      "outWaterTemp": {
+        "name": "当前出水温度",
+        "group": "temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer"
+      },
+      "hotWaterTemp": {
+        "name": "热水温度",
+        "group": "temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer"
+      },
+      "waterFlow": {
+        "name": "流量",
+        "group": "water",
+        "unit": "L/min",
+        "icon": "mdi:water-pump"
+      },
+      "fireTimes": {
+        "name": "点火次数",
+        "group": "combustion",
+        "unit": "次",
+        "icon": "mdi:fire"
+      },
+      "totalWaterNum": {
+        "name": "总用水量",
+        "group": "water",
+        "unit": "升",
+        "icon": "mdi:water"
+      },
+      "totalGasNum": {
+        "name": "总用气量",
+        "group": "combustion",
+        "unit": "立方米",
+        "icon": "mdi:fire"
+      },
+      "cruisingTotalGasNum": {
+        "name": "巡航总用气量",
+        "group": "combustion",
+        "unit": "立方米",
+        "icon": "mdi:counter"
+      },
+      "secAllBuringTime": {
+        "name": "总燃烧时间",
+        "group": "combustion",
+        "unit": "秒",
+        "icon": "mdi:timer"
+      },
+      "secAllFireNum": {
+        "name": "累计点火次数",
+        "group": "combustion",
+        "unit": "次",
+        "icon": "mdi:counter"
+      },
+      "secPumpOperatingFre": {
+        "name": "水泵运行频率",
+        "group": "pump_valve",
+        "unit": "转/分",
+        "icon": "mdi:speedometer"
+      },
+      "gasPressure": {
+        "name": "燃气压力",
+        "group": "combustion",
+        "unit": "千帕",
+        "icon": "mdi:gauge"
+      },
+      "waterHardness": {
+        "name": "水硬度",
+        "group": "water_quality",
+        "unit": "mg/L",
+        "icon": "mdi:potable-water"
+      },
+      "fanSpeed": {
+        "name": "风扇转速",
+        "group": "fan",
+        "unit": "rpm",
+        "icon": "mdi:fan"
+      },
+      "fanSpeedFeedback": {
+        "name": "风扇反馈转速",
+        "group": "fan",
+        "unit": "rpm",
+        "icon": "mdi:fan"
+      },
+      "fanCurrent": {
+        "name": "风扇电流",
+        "group": "fan",
+        "unit": "A",
+        "icon": "mdi:current-ac"
+      },
+      "coConcentration": {
+        "name": "CO浓度",
+        "group": "combustion",
+        "unit": "ppm",
+        "icon": "mdi:molecule-co"
+      },
+      "cOConcentration": {
+        "name": "CO浓度",
+        "group": "combustion",
+        "unit": "ppm",
+        "icon": "mdi:molecule-co"
+      },
+      "deviceStatus": {
+        "name": "设备状态",
+        "group": "fault",
+        "unit": "",
+        "icon": "mdi:information",
+        "value_map": {
+          "1": "运行",
+          "0": "关机"
+        }
+      },
+      "workStatus": {
+        "name": "运行状态",
+        "group": "fault",
+        "unit": "",
+        "icon": "mdi:information",
+        "value_map": {
+          "1": "运行",
+          "0": "停止"
+        }
+      },
+      "heating": {
+        "name": "燃烧加热状态",
+        "group": "combustion",
+        "unit": "",
+        "icon": "mdi:fire",
+        "value_map": {
+          "1": "加热中",
+          "0": "未加热"
+        }
+      },
+      "powerStatus": {
+        "name": "供电状态",
+        "group": "fault",
+        "unit": "",
+        "icon": "mdi:power-plug",
+        "value_map": {
+          "1": "通电",
+          "0": "断电"
+        }
+      },
+      "errorCode": {
+        "name": "错误代码",
+        "group": "fault",
+        "unit": "",
+        "icon": "mdi:alert"
+      },
+      "secRpmTimeA": {
+        "name": "辅助转速时间 A",
+        "group": "pump_valve",
+        "unit": "秒",
+        "icon": "mdi:timer"
+      },
+      "secRpmTimeB": {
+        "name": "辅助转速时间 B",
+        "group": "pump_valve",
+        "unit": "秒",
+        "icon": "mdi:timer"
+      },
+      "secRpmTimeC": {
+        "name": "辅助转速时间 C",
+        "group": "pump_valve",
+        "unit": "秒",
+        "icon": "mdi:timer"
+      },
+      "secRpmTimeD": {
+        "name": "辅助转速时间 D",
+        "group": "pump_valve",
+        "unit": "秒",
+        "icon": "mdi:timer"
+      },
+      "secDutyProportion": {
+        "name": "燃烧比例",
+        "group": "combustion",
+        "unit": "%",
+        "icon": "mdi:gauge"
+      },
+      "secAdjustMaxCurrent": {
+        "name": "水泵最大电流",
+        "group": "electrical",
+        "unit": "A",
+        "icon": "mdi:current-ac"
+      },
+      "secAdjustMinCurrent": {
+        "name": "水泵最小电流",
+        "group": "electrical",
+        "unit": "A",
+        "icon": "mdi:current-ac"
+      },
+      "secLitre": {
+        "name": "水泵累计升数",
+        "group": "pump_valve",
+        "unit": "升",
+        "icon": "mdi:water"
+      },
+      "currFireWorkTime": {
+        "name": "当前点火时间",
+        "group": "combustion",
+        "unit": "秒",
+        "icon": "mdi:timer"
+      },
+      "secPumpRunningCurrent": {
+        "name": "水泵运行电流",
+        "group": "electrical",
+        "unit": "A",
+        "icon": "mdi:current-ac"
+      },
+      "secAllCirAntifreeNum": {
+        "name": "循环防冻次数",
+        "group": "water",
+        "unit": "次",
+        "icon": "mdi:counter"
+      },
+      "secAllFirCirAntifreeNum": {
+        "name": "点火循环防冻次数",
+        "group": "combustion",
+        "unit": "次",
+        "icon": "mdi:counter"
+      },
+      "secWindPressureZeroValue": {
+        "name": "风压零点值",
+        "group": "fan",
+        "unit": "",
+        "icon": "mdi:gauge"
+      },
+      "secAntiWindPressNum": {
+        "name": "防回风次数",
+        "group": "fan",
+        "unit": "次",
+        "icon": "mdi:counter"
+      },
+      "secVersionCode": {
+        "name": "固件版本代码",
+        "group": "fault",
+        "unit": "",
+        "icon": "mdi:information"
+      },
+      "cruiseStatus": {
+        "name": "巡航状态",
+        "group": "mode",
+        "unit": "",
+        "icon": "mdi:water-sync",
+        "value_map": {
+          "1": "开启",
+          "0": "关闭"
+        }
+      },
+      "pressurizeStatus": {
+        "name": "增压状态",
+        "group": "mode",
+        "unit": "",
+        "icon": "mdi:water-pump",
+        "value_map": {
+          "1": "开启",
+          "0": "关闭"
+        }
+      },
+      "halfPipeStatus": {
+        "name": "节能半管状态",
+        "group": "mode",
+        "unit": "",
+        "icon": "mdi:pipe",
+        "value_map": {
+          "1": "开启",
+          "0": "关闭"
+        }
+      },
+      "halfPipeCirclelStatus": {
+        "name": "节能零冷水状态",
+        "group": "mode",
+        "unit": "",
+        "icon": "mdi:pipe",
+        "value_map": {
+          "1": "开启",
+          "0": "关闭"
+        }
+      }
     },
     "water_heater": {
       "default_name": "史密斯 燃气热水器",
       "operation_mode": {
-        "off": "关闭", 
+        "off": "关闭",
         "gas": "燃气加热",
-        "cruise": "零冷水", 
+        "cruise": "零冷水",
         "half_pipe": "节能零冷水"
       }
     },

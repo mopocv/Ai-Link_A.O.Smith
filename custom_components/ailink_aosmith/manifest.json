@@ -4,11 +4,9 @@
   "codeowners": [
     "@mopocv"
   ],
-  "version": "1.0.5",
+  "version": "1.1.0",
   "documentation": "https://github.com/mopocv/Ai-Link_A.O.Smith",
-  "requirements": [
-    "aiohttp>=3.8.0"
-  ],
+  "requirements": [],
   "dependencies": [],
   "config_flow": true,
   "integration_type": "hub",
