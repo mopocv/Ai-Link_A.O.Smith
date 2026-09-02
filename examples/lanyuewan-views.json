@@ -1,0 +1,410 @@
+{
+  "views": [
+    {
+      "title": "热水器",
+      "path": "water-heater",
+      "icon": "mdi:water-boiler",
+      "type": "sections",
+      "max_columns": 3,
+      "theme": "Mushroom",
+      "sections": [
+        {
+          "type": "grid",
+          "cards": [
+            {
+              "type": "custom:mushroom-title-card",
+              "title": "舒适热水",
+              "subtitle": "A. O. SMITH · 燃气热水器"
+            },
+            {
+              "type": "thermostat",
+              "entity": "climate.ran_qi_re_shui_qi_wen_kong",
+              "name": "热水温度",
+              "show_current_as_primary": false,
+              "features": [
+                {
+                  "type": "climate-hvac-modes",
+                  "hvac_modes": [
+                    "off",
+                    "heat"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "custom:mushroom-entity-card",
+              "entity": "sensor.ran_qi_re_shui_qi_ran_shao_jia_re_zhuang_tai",
+              "name": "运行状态",
+              "icon": "mdi:fire",
+              "icon_color": "deep-orange",
+              "layout": "horizontal",
+              "grid_options": {
+                "columns": 6,
+                "rows": 1
+              },
+              "tap_action": {
+                "action": "more-info"
+              }
+            },
+            {
+              "type": "custom:mushroom-entity-card",
+              "entity": "sensor.chu_shui_wen_du_2",
+              "name": "实际出水温度",
+              "icon": "mdi:thermometer-water",
+              "icon_color": "orange",
+              "layout": "horizontal",
+              "grid_options": {
+                "columns": 6,
+                "rows": 1
+              },
+              "tap_action": {
+                "action": "more-info"
+              }
+            }
+          ]
+        },
+        {
+          "type": "grid",
+          "cards": [
+            {
+              "type": "custom:mushroom-title-card",
+              "title": "循环与增压",
+              "subtitle": "按需循环 · 每一分钟都可调整"
+            },
+            {
+              "type": "tile",
+              "entity": "switch.ran_qi_re_shui_qi_cruise",
+              "name": "零冷水",
+              "icon": "mdi:water-sync",
+              "color": "cyan",
+              "features": [
+                {
+                  "type": "toggle"
+                }
+              ]
+            },
+            {
+              "type": "tile",
+              "entity": "switch.ran_qi_re_shui_qi_half_pipe",
+              "name": "节能半管零冷水",
+              "icon": "mdi:leaf-circle",
+              "color": "green",
+              "features": [
+                {
+                  "type": "toggle"
+                }
+              ]
+            },
+            {
+              "type": "tile",
+              "entity": "number.ran_qi_re_shui_qi_yi_jian_ling_leng_shui_yun_xing_shi_chang",
+              "name": "零冷水时长 · 1–99 分钟",
+              "grid_options": {
+                "columns": 12,
+                "rows": 3
+              },
+              "icon": "mdi:timer-outline",
+              "color": "cyan",
+              "features": [
+                {
+                  "type": "numeric-input",
+                  "style": "slider"
+                },
+                {
+                  "type": "numeric-input",
+                  "style": "buttons"
+                }
+              ]
+            },
+            {
+              "type": "tile",
+              "entity": "fan.ran_qi_re_shui_qi_san_dang_zeng_ya",
+              "name": "增压 · 低 / 中 / 高",
+              "grid_options": {
+                "columns": 12,
+                "rows": 2
+              },
+              "icon": "mdi:water-pump",
+              "color": "blue",
+              "state_content": [
+                "state",
+                "pressure_level"
+              ],
+              "features": [
+                {
+                  "type": "fan-speed"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "grid",
+          "cards": [
+            {
+              "type": "custom:mushroom-title-card",
+              "title": "用水与能耗",
+              "subtitle": "实时状态与累计用量"
+            },
+            {
+              "type": "custom:mushroom-entity-card",
+              "entity": "sensor.liu_liang_2",
+              "name": "出水流量",
+              "icon": "mdi:waves-arrow-right",
+              "icon_color": "cyan",
+              "layout": "horizontal",
+              "grid_options": {
+                "columns": 6,
+                "rows": 1
+              },
+              "tap_action": {
+                "action": "more-info"
+              }
+            },
+            {
+              "type": "custom:mushroom-entity-card",
+              "entity": "sensor.feng_shan_zhuan_su_2",
+              "name": "风机转速",
+              "icon": "mdi:fan",
+              "icon_color": "blue",
+              "layout": "horizontal",
+              "grid_options": {
+                "columns": 6,
+                "rows": 1
+              },
+              "tap_action": {
+                "action": "more-info"
+              }
+            },
+            {
+              "type": "custom:mini-graph-card",
+              "name": "出水温度 · 最近 6 小时",
+              "entities": [
+                {
+                  "entity": "sensor.chu_shui_wen_du_2",
+                  "color": "#ff9f43"
+                }
+              ],
+              "hours_to_show": 6,
+              "points_per_hour": 12,
+              "line_width": 3,
+              "show": {
+                "fill": "fade",
+                "extrema": true,
+                "labels": true
+              }
+            },
+            {
+              "type": "custom:mushroom-entity-card",
+              "entity": "sensor.jin_ri_ran_qi",
+              "name": "今日燃气",
+              "icon": "mdi:fire",
+              "icon_color": "amber",
+              "layout": "horizontal",
+              "grid_options": {
+                "columns": 6,
+                "rows": 1
+              },
+              "tap_action": {
+                "action": "more-info"
+              }
+            },
+            {
+              "type": "custom:mushroom-entity-card",
+              "entity": "sensor.ben_yue_ran_qi",
+              "name": "本月燃气",
+              "icon": "mdi:calendar-month",
+              "icon_color": "amber",
+              "layout": "horizontal",
+              "grid_options": {
+                "columns": 6,
+                "rows": 1
+              },
+              "tap_action": {
+                "action": "more-info"
+              }
+            },
+            {
+              "type": "custom:mushroom-template-card",
+              "primary": "燃气统计报表",
+              "secondary": "查看详情",
+              "icon": "mdi:chart-bar",
+              "icon_color": "amber",
+              "tap_action": {
+                "action": "navigate",
+                "navigation_path": "/dashboard-mopo/gas"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "燃气报表",
+      "path": "gas",
+      "icon": "mdi:chart-bar",
+      "type": "sections",
+      "max_columns": 2,
+      "theme": "Mushroom",
+      "sections": [
+        {
+          "type": "grid",
+          "cards": [
+            {
+              "type": "custom:mushroom-title-card",
+              "title": "燃气用量",
+              "subtitle": "蓝悦湾 · 热水器用气统计"
+            },
+            {
+              "type": "custom:mushroom-entity-card",
+              "entity": "sensor.jin_ri_ran_qi",
+              "name": "今日用量",
+              "icon": "mdi:fire",
+              "icon_color": "amber",
+              "layout": "horizontal",
+              "grid_options": {
+                "columns": 6,
+                "rows": 1
+              },
+              "tap_action": {
+                "action": "more-info"
+              }
+            },
+            {
+              "type": "custom:mushroom-entity-card",
+              "entity": "sensor.ben_yue_ran_qi",
+              "name": "本月用量",
+              "icon": "mdi:calendar-month",
+              "icon_color": "amber",
+              "layout": "horizontal",
+              "grid_options": {
+                "columns": 6,
+                "rows": 1
+              },
+              "tap_action": {
+                "action": "more-info"
+              }
+            },
+            {
+              "type": "custom:mushroom-entity-card",
+              "entity": "sensor.aosmith_gas_total",
+              "name": "设备累计",
+              "icon": "mdi:counter",
+              "icon_color": "amber",
+              "layout": "horizontal",
+              "grid_options": {
+                "columns": 6,
+                "rows": 1
+              },
+              "tap_action": {
+                "action": "more-info"
+              }
+            },
+            {
+              "type": "custom:mushroom-entity-card",
+              "entity": "sensor.aosmith_gas_circulation",
+              "name": "其中：零冷水累计",
+              "icon": "mdi:water-sync",
+              "icon_color": "cyan",
+              "layout": "horizontal",
+              "grid_options": {
+                "columns": 6,
+                "rows": 1
+              },
+              "tap_action": {
+                "action": "more-info"
+              }
+            },
+            {
+              "type": "markdown",
+              "content": "每日、每月统计从接入后开始积累；设备累计包含此前用量。趋势图将在首个整点统计生成后显示。零冷水用气是累计用气的一部分，不重复相加。\n\n当前统计对象为**热水器**，不包含燃气灶。"
+            },
+            {
+              "type": "custom:mushroom-template-card",
+              "primary": "打开能源统计",
+              "secondary": "查看详情",
+              "icon": "mdi:lightning-bolt-circle",
+              "icon_color": "amber",
+              "tap_action": {
+                "action": "navigate",
+                "navigation_path": "/energy"
+              }
+            }
+          ]
+        },
+        {
+          "type": "grid",
+          "cards": [
+            {
+              "type": "custom:mushroom-title-card",
+              "title": "用量趋势",
+              "subtitle": "立方米 m³ · 按实际消耗统计"
+            },
+            {
+              "type": "statistics-graph",
+              "title": "近 7 天 · 每日用气",
+              "chart_type": "bar",
+              "period": "day",
+              "days_to_show": 7,
+              "stat_types": [
+                "change"
+              ],
+              "entities": [
+                {
+                  "entity": "sensor.aosmith_gas_total",
+                  "name": "热水器燃气"
+                }
+              ],
+              "hide_legend": true
+            },
+            {
+              "type": "statistics-graph",
+              "title": "近 30 天 · 每日用气",
+              "chart_type": "bar",
+              "period": "day",
+              "days_to_show": 30,
+              "stat_types": [
+                "change"
+              ],
+              "entities": [
+                {
+                  "entity": "sensor.aosmith_gas_total",
+                  "name": "热水器燃气"
+                }
+              ],
+              "hide_legend": true
+            },
+            {
+              "type": "statistics-graph",
+              "title": "近 12 个月 · 每月用气",
+              "chart_type": "bar",
+              "period": "month",
+              "days_to_show": 365,
+              "stat_types": [
+                "change"
+              ],
+              "entities": [
+                {
+                  "entity": "sensor.aosmith_gas_total",
+                  "name": "热水器燃气"
+                }
+              ],
+              "hide_legend": true
+            },
+            {
+              "type": "custom:mushroom-template-card",
+              "primary": "返回热水器控制",
+              "secondary": "查看详情",
+              "icon": "mdi:water-boiler",
+              "icon_color": "amber",
+              "tap_action": {
+                "action": "navigate",
+                "navigation_path": "/dashboard-mopo/water-heater"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

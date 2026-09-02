@@ -16,6 +16,7 @@ from .const import (
 )
 from .entity import AOSmithEntity, extract_output_data
 from .translations import async_load_translation
+from .protocol import numeric
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -80,6 +81,13 @@ async def async_setup_entry(
             if sensor_key in MERGED_SENSOR_KEYS:
                 continue
             entities.append(AOSmithSensor(coordinator, device_id, sensor_key, sensor_mapping))
+
+        # Keep legacy raw counters/history separate from normalized statistics.
+        # The verified JSQ31-VJS energy protocol reports tenths of a cubic metre.
+        if device_data.get("productModel") == "JSQ31-VJS":
+            for key, name in (("totalGasNum", "史密斯累计燃气"),
+                              ("cruisingTotalGasNum", "史密斯零冷水累计燃气")):
+                entities.append(AOSmithGasSensor(coordinator, device_id, key, name))
 
         # Create raw sensors for extra keys not in mapping
         if enable_raw_sensors:
@@ -149,6 +157,32 @@ class AOSmithSensor(AOSmithEntity, SensorEntity):
             "source_key": self._sensor_key,
             "group": self._group,
         }
+
+
+class AOSmithGasSensor(AOSmithEntity, SensorEntity):
+    """Normalized lifetime counter with a new identity for clean statistics."""
+
+    _attr_device_class = SensorDeviceClass.GAS
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_native_unit_of_measurement = "m³"
+    _attr_suggested_display_precision = 1
+    _attr_icon = "mdi:fire"
+
+    def __init__(self, coordinator, device_id, key, name):
+        super().__init__(coordinator, device_id)
+        self._sensor_key = key
+        self._attr_name = name
+        self._attr_unique_id = f"ailink_aosmith_{device_id}_{key}_m3"
+
+    @property
+    def native_value(self):
+        value = numeric(self._get_output_data(), self._sensor_key)
+        return None if value is None or value < 0 else round(value / 10, 1)
+
+    @property
+    def extra_state_attributes(self):
+        return {"source_key": self._sensor_key, "raw_counter": numeric(
+            self._get_output_data(), self._sensor_key), "counter_scale": 0.1}
 
 
 class AOSmithRawSensor(AOSmithEntity, SensorEntity):

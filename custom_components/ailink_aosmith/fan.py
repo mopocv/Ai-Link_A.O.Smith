@@ -8,8 +8,11 @@ from .protocol import flag, numeric
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(AOSmithBooster(coordinator, key) for key, data in coordinator.data.items()
-                       if str(data.get("deviceCategory")) == DEVICE_CATEGORY_WATER_HEATER)
+    entities = []
+    for key, data in coordinator.data.items():
+        if str(data.get("deviceCategory")) == DEVICE_CATEGORY_WATER_HEATER:
+            entities.extend((AOSmithBooster(coordinator, key), AOSmithDurationSlider(coordinator, key)))
+    async_add_entities(entities)
 
 
 class AOSmithBooster(AOSmithEntity, FanEntity):
@@ -25,6 +28,11 @@ class AOSmithBooster(AOSmithEntity, FanEntity):
     @property
     def is_on(self):
         return flag(self._get_output_data(), "pressurize")
+
+    @property
+    def percentage_step(self):
+        """Expose one slider; actual writes still snap to the three pump levels."""
+        return 1
 
     @property
     def percentage(self):
@@ -58,3 +66,50 @@ class AOSmithBooster(AOSmithEntity, FanEntity):
 
     async def async_turn_off(self, **kwargs):
         await self.coordinator.async_command(self.device_id, "PressurizeOnOff", {"pressurize": "0"}, {"pressurize": 0})
+
+
+class AOSmithDurationSlider(AOSmithEntity, FanEntity):
+    """HomeKit percentage adapter: one percent means one minute, not fan speed.
+
+    HomeKit has no standalone number accessory. This optional adapter edits only
+    duration; it never starts circulation. Endpoints clamp to the device's range.
+    """
+
+    _attr_supported_features = FanEntityFeature.SET_SPEED | FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
+    _attr_speed_count = 100
+    _attr_icon = "mdi:timer-cog"
+
+    def __init__(self, coordinator, device_id):
+        super().__init__(coordinator, device_id)
+        self._attr_name = "零冷水时长（1%=1分钟）"
+        self._attr_unique_id = f"{device_id}_duration_slider"
+
+    @property
+    def percentage(self):
+        value = numeric(self._get_output_data(), "curiesTime")
+        return value if value is not None and 1 <= value <= 99 else None
+
+    @property
+    def is_on(self):
+        return None if self.percentage is None else True
+
+    @property
+    def extra_state_attributes(self):
+        return {"duration_minutes": self.percentage, "minimum_minutes": 1, "maximum_minutes": 99}
+
+    async def async_set_percentage(self, percentage):
+        value = float(percentage)
+        if not math.isfinite(value) or not 0 <= value <= 100:
+            raise ValueError("Percentage must be between 0 and 100")
+        minutes = max(1, min(99, math.floor(value + 0.5)))
+        await self.coordinator.async_command(self.device_id, "WaterCruiseTimer",
+            {"WaterCruiseTimer": str(minutes)}, {"curiesTime": minutes})
+
+    async def async_turn_on(self, percentage=None, preset_mode=None, **kwargs):
+        if percentage is not None:
+            await self.async_set_percentage(percentage)
+
+    async def async_turn_off(self, **kwargs):
+        # HomeKit sends Active=0 at the bottom of a fan slider. Duration cannot
+        # be disabled, so this selects the minimum without touching cruiseStatus.
+        await self.async_set_percentage(0)

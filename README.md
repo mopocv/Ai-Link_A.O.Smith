@@ -2,18 +2,21 @@
 
 用于 AI 家智控燃气热水器的 Home Assistant 自定义集成。通过史密斯云端控制设备，支持 HomeKit Bridge。
 
-## v1.1.0 功能
+## v1.2.0 功能
 
 | 功能 | Home Assistant | Apple 家庭（通过 HomeKit Bridge） |
 |---|---|---|
 | 设定水温、电源 | 热水器实体 + 温控实体 | 恒温器界面，选择 `climate` 实体 |
 | 实际出水温度、加热状态 | 温控及传感器 | 恒温器当前温度与加热/待机状态 |
 | 零冷水、节能半管零冷水 | 独立开关 | 独立开关 |
-| 增压开关、1/2/3 档 | 三档增压实体 + 开关 | 风扇样式控件，33/67/100% 对应三档 |
-| 零冷水时长 | 1–99 分钟整数输入 | 1/5/10/15/30/60/99 分钟快捷开关 |
+| 增压开关、1/2/3 档 | 单个增压滑条 | 单个风扇样式滑条，33/67/100% 对应三档 |
+| 零冷水时长 | 1–99 分钟滑条及 ±1 按钮 | 单个百分比滑条，1% = 1 分钟 |
+| 燃气消耗（JSQ31-VJS） | m³ 累计传感器、能源统计、每日/月报表 | 在 Home Assistant 查看 |
 | 风机转速、出水流量 | rpm、L/min 传感器 | Apple 家庭无原生数值显示类型 |
 
-增压控件控制水泵增压，不控制燃烧风机。时长快捷开关只修改设备时长，不启动循环；当前选中时长显示为开启，点击关闭不清空时长。自定义分钟数在 Home Assistant 设置；不属于预设时所有预设开关关闭。
+增压控件控制水泵增压，不控制燃烧风机。任意滑条位置会就近落到设备的 1/2/3 档，并回显实际值；0% 关闭增压。
+
+HomeKit 时长适配器借用风扇的百分比控件，名称明确标注“1%=1分钟”。步进 1%，有效值 1–99%；0%/关闭操作设为最小 1 分钟，100% 设为最大 99 分钟。它始终表示已设置的时长，不能关闭，也不会启动或停止零冷水。零冷水启停使用独立开关。旧版时长预设仍保留以兼容已有自动化，新配置不再导出这些开关。
 
 ### 范围与状态来源
 
@@ -47,15 +50,27 @@
 
 ## HomeKit 配置
 
-在 HomeKit Bridge 中选择：热水器**温控**、零冷水、节能半管、三档增压、实际出水温度，以及需要的时长预设。温控与原有 `water_heater` 只选一个，避免重复配件；三档增压包含开关，也可另外保留增压开关。
+在 HomeKit Bridge 中选择：热水器**温控**、零冷水、节能半管、三档增压、**零冷水时长（1%=1分钟）**和实际出水温度。温控与原有 `water_heater` 只选一个；增压只选择 `fan`，不要重复导出增压开关或旧版时长预设。已有配对只需修改原桥过滤器并重载，不需要删除桥或重新扫码。
 
-HomeKit 本身没有普通 `number` 实体；这里提供具有真实分钟名称的快捷开关。高级用法可以把零冷水 switch 配置为 `valve`，用单位为秒的 `input_number` 通过 `linked_valve_duration` 关联时长，并配置自动化与原始分钟实体双向同步；不同 HomeKit 客户端对阀门时长的编辑支持不同，不能保证 Apple 家庭会展示所有自定义数值设置。
+HomeKit 没有普通 `number` 配件，百分比适配器是为主界面滑条提供的明确映射。若希望原生时间单位，可另外配置 valve + linked_valve_duration，但 Apple 家庭的编辑入口和控件与百分比滑条不同。
 
 风机 rpm、流量 L/min 和任意文字状态不能通过标准 HomeKit Bridge 原样展示在 Apple 家庭中，请使用 Home Assistant 仪表盘查看。不要将其伪装成湿度、照度等错误类型。
 
 容器部署建议使用 host 网络，确保 mDNS 与 HomeKit 端口可被同一局域网访问。首次配对需在已登录目标 Apple 账号的 iPhone“家庭 → 添加配件”中扫描 HA 提供的二维码。
 
 参考：[HomeKit Bridge 官方文档](https://www.home-assistant.io/integrations/homekit/)。协议核对来源：官方 AI 家智控 [GasWater 网页入口](https://ailink-appservice-h5-prd.hotwater.com.cn/dist/index.html#/GasWater)，核对日期 2026-09-02。
+
+## 燃气统计与仪表盘
+
+JSQ31-VJS 新增独立的标准燃气累计传感器：按官方能耗页面的 0.1 m³ 计数单位换算，原始计数 2549 显示为 254.9 m³；原始字段和倍率保留在属性中。其他型号需另行核对单位后再开放统计。旧版原始传感器不改单位、不混入新统计，以免历史值发生十倍跳变。
+
+新传感器使用 `device_class: gas`、`state_class: total_increasing`、`m³`，可在“能源 → 燃气消耗”选择**累计燃气**。零冷水累计是其中的一部分，不能重复相加。统计仅覆盖热水器，不代表家庭燃气总表。未设置单价时只统计体积。
+
+[配置示例](examples/homeassistant.yaml) 提供桥过滤器和每日、每月 utility meter；[仪表盘视图](examples/lanyuewan-views.json) 提供热水器控制和燃气报表两个视图。实体 ID 要按自己环境对应调整；示例使用 Mushroom、mini-graph-card 和原生卡片。将两个视图追加到已有仪表盘，保留其他视图。
+
+新接入的每日、每月用量从接入时开始积累，不会把设备历史累计当成今日消费。长期趋势需要等待首个小时统计生成；不会伪造缺失的历史日/月数据。
+
+能耗换算来源：官方 [能耗页面脚本](https://ailink-appservice-h5-prd.hotwater.com.cn/dist/js/39.8c81819f.js)，`gas_water_heater_gas_consumption_*` 显示值除以 10 后以 m³ 展示。卡片参考 [Home Assistant 卡片功能](https://www.home-assistant.io/dashboards/features) 和 [Utility Meter](https://www.home-assistant.io/integrations/utility_meter/)。
 
 ## 验证
 

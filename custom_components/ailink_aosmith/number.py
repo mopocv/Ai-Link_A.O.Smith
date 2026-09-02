@@ -18,7 +18,7 @@ class AOSmithCuriesTimeNumber(AOSmithEntity, NumberEntity):
     _attr_native_step = 1
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_device_class = NumberDeviceClass.DURATION
-    _attr_mode = NumberMode.BOX
+    _attr_mode = NumberMode.SLIDER
     _attr_icon = "mdi:timer-cog"
 
     def __init__(self, coordinator, device_id):

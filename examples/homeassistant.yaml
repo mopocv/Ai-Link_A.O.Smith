@@ -1,0 +1,37 @@
+# Merge into your existing configuration. Adjust entity IDs and bridge settings.
+# Update the existing bridge rather than creating a second paired bridge.
+homekit:
+  - name: Smith Water Heater
+    port: 21065
+    filter:
+      include_entities:
+        - climate.ran_qi_re_shui_qi_wen_kong
+        - switch.ran_qi_re_shui_qi_cruise
+        - switch.ran_qi_re_shui_qi_half_pipe
+        - fan.ran_qi_re_shui_qi_san_dang_zeng_ya
+        - fan.aosmith_duration
+        - sensor.chu_shui_wen_du_2
+    entity_config:
+      climate.ran_qi_re_shui_qi_wen_kong:
+        name: 史密斯热水器
+      fan.ran_qi_re_shui_qi_san_dang_zeng_ya:
+        name: 热水器增压
+      fan.aosmith_duration:
+        name: 零冷水时长（1%=1分钟）
+
+# Rename the normalized sensor (unique ID ending totalGasNum_m3) to
+# sensor.aosmith_gas_total, and the cruisingTotalGasNum_m3 sensor to
+# sensor.aosmith_gas_circulation. The duration adapter ends in _duration_slider.
+# With these Chinese names, HA creates sensor.jin_ri_ran_qi and
+# sensor.ben_yue_ran_qi, as referenced by lanyuewan-views.json.
+utility_meter:
+  aosmith_gas_daily:
+    name: 今日燃气
+    source: sensor.aosmith_gas_total
+    cycle: daily
+    periodically_resetting: false
+  aosmith_gas_monthly:
+    name: 本月燃气
+    source: sensor.aosmith_gas_total
+    cycle: monthly
+    periodically_resetting: false
