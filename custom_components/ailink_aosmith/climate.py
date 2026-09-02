@@ -1,4 +1,5 @@
 """HomeKit-compatible thermostat for the gas water heater."""
+import math
 from homeassistant.components.climate import ClimateEntity, ClimateEntityFeature, HVACMode, HVACAction
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from .const import DOMAIN, DEVICE_CATEGORY_WATER_HEATER
@@ -60,7 +61,12 @@ class AOSmithClimate(AOSmithEntity, ClimateEntity):
         return None if heating is None else HVACAction.HEATING if heating else HVACAction.IDLE
 
     async def async_set_temperature(self, **kwargs):
-        value = kwargs[ATTR_TEMPERATURE]
+        value = float(kwargs[ATTR_TEMPERATURE])
+        if not math.isfinite(value) or not self.min_temp <= value <= self.max_temp:
+            raise ValueError(f"Temperature must be {self.min_temp}–{self.max_temp} °C")
+        # HomeKit sends fractional degrees even for whole-degree devices.
+        step = 1 if value >= 50 else self.target_temperature_step
+        value = math.floor(value / step + 0.5) * step
         await self.coordinator.async_command(self.device_id, "temperature", {"temperature": value}, {"waterTemp": value})
 
     async def async_set_hvac_mode(self, hvac_mode):

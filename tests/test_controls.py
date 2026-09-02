@@ -68,6 +68,8 @@ class ControlTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(climate.current_temperature, 26)
         self.assertEqual(climate.hvac_mode, 'heat')
         self.assertEqual(climate.hvac_action, 'idle')
+        await climate.async_set_temperature(temperature=38.5)
+        c.async_command.assert_awaited_with('test', 'temperature', {'temperature': 39}, {'waterTemp': 39})
         fan = AOSmithBooster(c, 'test')
         self.assertEqual(fan.speed_count, 3)
         for percentage, level in ((33, 1), (67, 2), (100, 3)):
